@@ -23,24 +23,36 @@
     });
   </script>
   
-  <!-- Load Supabase directly -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+  <!-- Load Supabase directly with better error handling -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"
+    onload="console.log('Supabase script loaded successfully')"
+    onerror="console.error('Failed to load Supabase script'); setupMockSupabase()">
+  </script>
   
   <!-- Supabase initialization script -->
   <script>
     // Initialize Supabase when the page loads
     document.addEventListener('DOMContentLoaded', function() {
       try {
-        if (typeof supabase !== 'undefined') {
-          console.log('Supabase loaded successfully');
-          window.supabaseClient = supabase;
-        } else {
-          console.error('Supabase not defined after loading script');
-          setupMockSupabase();
-        }
-        
-        // Notify any listeners that Supabase is ready (or mock is ready)
-        window.dispatchEvent(new Event('supabaseLoaded'));
+        // Wait a moment to ensure Supabase is fully loaded
+        setTimeout(function() {
+          if (typeof supabase !== 'undefined') {
+            console.log('Supabase loaded successfully');
+            // Create the Supabase client directly
+            window.supabaseClient = supabase.createClient(
+              'https://qfwlprzvritrqhahemdq.supabase.co',
+              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmd2xwcnp2cml0cnFoYWhlbWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MTgwMzYsImV4cCI6MjA1NjQ5NDAzNn0.etI9YDqQ0DuetqiAomUUr0Vs1AL-pfjNnvPOIR6SQM8'
+            );
+            console.log('Supabase client created directly');
+          } else {
+            console.error('Supabase not defined after loading script');
+            setupMockSupabase();
+          }
+          
+          // Notify any listeners that Supabase is ready (or mock is ready)
+          window.dispatchEvent(new Event('supabaseLoaded'));
+        }, 500);
       } catch (error) {
         console.error('Error initializing Supabase:', error);
         setupMockSupabase();

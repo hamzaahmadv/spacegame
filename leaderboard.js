@@ -67,11 +67,23 @@ function initSupabaseClient() {
     
     if (!window.supabaseClient) {
       console.error('window.supabaseClient is not defined');
-      createMockSupabaseClient();
-      return;
+      
+      // Try to create the client directly if supabase is available globally
+      if (typeof supabase !== 'undefined') {
+        console.log('Creating Supabase client directly using global supabase object');
+        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log('Supabase client created directly');
+      } else {
+        console.error('Global supabase object not available, falling back to mock client');
+        createMockSupabaseClient();
+        return;
+      }
+    } else {
+      // Use the client created in index.html
+      console.log('Using Supabase client from window.supabaseClient');
+      supabase = window.supabaseClient;
     }
     
-    supabase = window.supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
     console.log('Supabase client initialized successfully');
     
     // Test the connection
@@ -87,11 +99,29 @@ async function testSupabaseConnection() {
   try {
     console.log('Testing Supabase connection...');
     
+    // Check if supabase client has the required methods
+    if (!supabase || !supabase.from) {
+      console.error('Supabase client is not properly initialized');
+      createMockSupabaseClient();
+      return;
+    }
+    
+    // Set a timeout to prevent hanging if the connection takes too long
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Connection test timed out')), 5000);
+    });
+    
     // Simple query to test connection
-    const { data, error } = await supabase
+    const connectionPromise = supabase
       .from('leaderboard')
       .select('*')
       .limit(1);
+    
+    // Race between the connection and the timeout
+    const { data, error } = await Promise.race([
+      connectionPromise,
+      timeoutPromise
+    ]);
     
     if (error) {
       console.error('Supabase connection test failed:', error);
