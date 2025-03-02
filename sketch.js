@@ -34,6 +34,8 @@ let bullets = [];
 let enemies = [];
 let stars = [];
 let powerUps = [];
+let visualEffects = []; // For explosions and particle effects
+let textEffects = []; // For floating text messages
 
 // Game settings
 const PLAYER_SIZE = 30;
@@ -41,7 +43,7 @@ const BULLET_SPEED = 10;
 const ENEMY_SPAWN_RATE = 0.02; // Chance per frame
 const POWERUP_SPAWN_RATE = 0.001; // Chance per frame
 const MAX_ENEMIES = 15;
-const BOSS_LEVELS = [5, 10, 15, 20, 25]; // Levels where bosses appear
+const BOSS_LEVELS = [10, 20, 30, 40, 50]; // Bosses appear every 10 levels
 
 // UI settings
 let gameWidth, gameHeight;
@@ -126,6 +128,8 @@ function resetGame() {
   bullets = [];
   enemies = [];
   powerUps = [];
+  visualEffects = [];
+  textEffects = [];
   
   // Reset background color
   updateBackgroundColor(1);
@@ -246,6 +250,18 @@ function updateGame() {
           bossIntroAlpha = 0;
         }
       }, 3000); // 3 seconds after warning
+    } else {
+      // Regular level up - show level up message
+      let levelUpMsg = {
+        text: "LEVEL " + level,
+        pos: createVector(width/2, height/2),
+        size: gameWidth * 0.08,
+        alpha: 255,
+        color: color(100, 255, 100),
+        life: 90
+      };
+      
+      textEffects.push(levelUpMsg);
     }
     
     prevLevel = level;
@@ -282,6 +298,14 @@ function updateGame() {
               ));
             }
             
+            // Create large explosion at boss position
+            createExplosion(
+              enemies[j].pos.x, 
+              enemies[j].pos.y, 
+              enemies[j].size, 
+              color(255, 150, 0)
+            );
+            
             // Remove the boss
             enemies.splice(j, 1);
             
@@ -289,13 +313,35 @@ function updateGame() {
             bossActive = false;
             bossDefeated = true;
             
-            // Screen shake effect
+            // Increment level after defeating a boss
+            level++;
+            
+            // Visual feedback for boss defeat
             screenShake = 20;
+            
+            // Create victory effect
+            createVictoryEffect();
+          } else {
+            // Boss took damage but not defeated - create small hit effect
+            createExplosion(
+              bullets[i].pos.x, 
+              bullets[i].pos.y, 
+              20, 
+              color(255, 200, 100)
+            );
           }
         } else {
           // Regular enemy hit
           // Add score based on enemy type
           score += enemies[j].points;
+          
+          // Create explosion at enemy position
+          createExplosion(
+            enemies[j].pos.x, 
+            enemies[j].pos.y, 
+            enemies[j].size * 0.8, 
+            color(255, 100, 50)
+          );
           
           // Chance to spawn power-up
           if (random() < 0.1) {
@@ -369,6 +415,9 @@ function updateGame() {
     }
   }
   
+  // Update visual effects
+  updateVisualEffects();
+  
   // Only spawn regular enemies if no boss is active
   if (!bossActive) {
     // Spawn enemies based on level and time
@@ -429,6 +478,9 @@ function drawGame() {
     powerUp.display();
   }
   
+  // Draw visual effects
+  drawVisualEffects();
+  
   // Draw UI
   drawGameUI();
   
@@ -485,16 +537,18 @@ function drawGameUI() {
       fill(255, 100, 100);
       
       let bossName = "";
-      if (level === 5) {
-        bossName = "DESTROYER";
-      } else if (level === 10) {
-        bossName = "MOTHERSHIP";
-      } else if (level === 15) {
-        bossName = "DREADNOUGHT";
+      if (level === 10) {
+        bossName = "CRIMSON DESTROYER";
       } else if (level === 20) {
-        bossName = "HIVEMIND";
-      } else if (level === 25) {
-        bossName = "OMEGA";
+        bossName = "SCARLET MOTHERSHIP";
+      } else if (level === 30) {
+        bossName = "RUBY DREADNOUGHT";
+      } else if (level === 40) {
+        bossName = "BLOOD HIVEMIND";
+      } else if (level === 50) {
+        bossName = "OMEGA PHOENIX";
+      } else {
+        bossName = "ELITE WARSHIP";
       }
       
       text(bossName, uiPadding, height - uiHeight/2);
@@ -849,42 +903,54 @@ function drawBossIntro() {
   let bossDescription = "";
   
   // Set boss name and description based on level
-  if (level === 5) {
-    bossName = "DESTROYER";
-    bossDescription = "A heavily armed battle cruiser";
-  } else if (level === 10) {
-    bossName = "MOTHERSHIP";
-    bossDescription = "Command vessel with teleportation technology";
-  } else if (level === 15) {
-    bossName = "DREADNOUGHT";
-    bossDescription = "Massive warship with devastating firepower";
+  if (level === 10) {
+    bossName = "CRIMSON DESTROYER";
+    bossDescription = "Heavily armed battle cruiser with advanced weaponry";
   } else if (level === 20) {
-    bossName = "HIVEMIND";
-    bossDescription = "Swarm intelligence with regenerative abilities";
-  } else if (level === 25) {
-    bossName = "OMEGA";
-    bossDescription = "The final challenge";
+    bossName = "SCARLET MOTHERSHIP";
+    bossDescription = "Command vessel with teleportation and shield technology";
+  } else if (level === 30) {
+    bossName = "RUBY DREADNOUGHT";
+    bossDescription = "Massive warship with devastating firepower and armor";
+  } else if (level === 40) {
+    bossName = "BLOOD HIVEMIND";
+    bossDescription = "Swarm intelligence with regenerative abilities and drones";
+  } else if (level === 50) {
+    bossName = "OMEGA PHOENIX";
+    bossDescription = "The ultimate challenge - a ship reborn from cosmic fire";
+  } else {
+    // For any other boss level
+    bossName = "ELITE WARSHIP";
+    bossDescription = "A powerful enemy vessel with unknown capabilities";
   }
   
-  // Warning text
+  // Warning text with glow effect
   fill(255, 50, 50, bossIntroAlpha);
   textSize(gameWidth * 0.08);
   text("WARNING!", width/2, height/3 - 50);
   
+  // Add glow effect to warning text
+  drawingContext.shadowBlur = 20;
+  drawingContext.shadowColor = color(255, 0, 0, bossIntroAlpha * 0.7);
+  
   // Boss name with pulsing effect
   let pulseAmount = sin(frameCount * 0.1) * 0.2 + 0.8;
-  fill(255, 200, 50, bossIntroAlpha * pulseAmount);
+  fill(255, 50, 50, bossIntroAlpha * pulseAmount);
   textSize(gameWidth * 0.12);
   text("BOSS: " + bossName, width/2, height/2);
+  
+  // Reset shadow for other text
+  drawingContext.shadowBlur = 0;
   
   // Boss description
   fill(200, 200, 255, bossIntroAlpha);
   textSize(gameWidth * 0.04);
   text(bossDescription, width/2, height/2 + 50);
   
-  // Get ready text
+  // Get ready text with pulsing
   if (bossIntroTimer > 120) {
-    fill(255, 255, 255, bossIntroAlpha);
+    let readyPulse = sin(frameCount * 0.2) * 0.2 + 0.8;
+    fill(255, 255, 255, bossIntroAlpha * readyPulse);
     textSize(gameWidth * 0.06);
     text("GET READY!", width/2, height * 2/3);
   }
@@ -892,11 +958,37 @@ function drawBossIntro() {
 
 // Draw boss warning (appears briefly before boss intro)
 function drawBossWarning() {
+  // Semi-transparent red overlay that pulses
+  let overlayPulse = sin(frameCount * 0.1) * 0.05 + 0.05;
+  fill(255, 0, 0, overlayPulse * bossWarningAlpha);
+  rect(0, 0, width, height);
+  
   // Pulsing warning text at top of screen
   let pulseAmount = sin(frameCount * 0.2) * 0.3 + 0.7;
+  
+  // Add glow effect to warning text
+  drawingContext.shadowBlur = 15;
+  drawingContext.shadowColor = color(255, 0, 0, bossWarningAlpha * 0.7);
+  
   fill(255, 50, 50, bossWarningAlpha * pulseAmount);
-  textSize(gameWidth * 0.05);
+  textSize(gameWidth * 0.06);
   text("BOSS APPROACHING", width/2, height * 0.15);
+  
+  // Add warning icon
+  if (bossWarningTimer % 30 < 15) { // Blinking effect
+    fill(255, 50, 50, bossWarningAlpha);
+    triangle(
+      width/2 - 20, height * 0.22,
+      width/2 + 20, height * 0.22,
+      width/2, height * 0.22 - 35
+    );
+    fill(255, 255, 255, bossWarningAlpha);
+    textSize(gameWidth * 0.04);
+    text("!", width/2, height * 0.22 - 15);
+  }
+  
+  // Reset shadow
+  drawingContext.shadowBlur = 0;
   
   // Update warning alpha
   if (bossWarningTimer < 60) {
@@ -922,19 +1014,213 @@ function spawnBoss() {
   bossLevel = level;
   
   // Create the appropriate boss based on level
-  if (level === 5) {
-    enemies.push(new DestroyerBoss(x, y, level));
-  } else if (level === 10) {
-    enemies.push(new MothershipBoss(x, y, level));
-  } else if (level === 15) {
-    // For future bosses, we'll use DestroyerBoss as a fallback
-    enemies.push(new DestroyerBoss(x, y, level));
+  if (level === 10) {
+    // Level 10: Crimson Destroyer
+    let boss = new DestroyerBoss(x, y, level);
+    boss.color = color(220, 30, 30); // Bright red
+    enemies.push(boss);
   } else if (level === 20) {
-    enemies.push(new MothershipBoss(x, y, level));
-  } else if (level === 25) {
-    enemies.push(new DestroyerBoss(x, y, level));
+    // Level 20: Scarlet Mothership
+    let boss = new MothershipBoss(x, y, level);
+    boss.color = color(200, 20, 60); // Crimson
+    enemies.push(boss);
+  } else if (level === 30) {
+    // Level 30: Ruby Dreadnought - using DestroyerBoss with enhanced properties
+    let boss = new DestroyerBoss(x, y, level);
+    boss.color = color(180, 0, 30); // Deep red
+    boss.size *= 1.2; // Larger
+    boss.maxHealth *= 1.5; // More health
+    boss.health = boss.maxHealth;
+    enemies.push(boss);
+  } else if (level === 40) {
+    // Level 40: Blood Hivemind - using MothershipBoss with enhanced properties
+    let boss = new MothershipBoss(x, y, level);
+    boss.color = color(150, 0, 0); // Dark red
+    boss.orbitPoints = 6; // More orbit points
+    boss.attackRate *= 0.8; // Faster attacks
+    enemies.push(boss);
+  } else if (level === 50) {
+    // Level 50: Omega Phoenix - ultimate boss
+    let boss = new DestroyerBoss(x, y, level);
+    boss.color = color(255, 30, 0); // Fiery red
+    boss.size *= 1.5; // Much larger
+    boss.maxHealth *= 2; // Much more health
+    boss.health = boss.maxHealth;
+    boss.attackRate *= 0.7; // Much faster attacks
+    enemies.push(boss);
+  } else {
+    // For any other boss level, scale based on level
+    if (level % 20 === 0) {
+      // Every 20 levels use Mothership variant
+      let boss = new MothershipBoss(x, y, level);
+      boss.color = color(200 - (level % 100), 20, 40 + (level % 50));
+      enemies.push(boss);
+    } else {
+      // Otherwise use Destroyer variant
+      let boss = new DestroyerBoss(x, y, level);
+      boss.color = color(220 - (level % 100), 30 + (level % 30), 30);
+      enemies.push(boss);
+    }
   }
   
   // Screen shake effect for boss entrance
-  screenShake = 10;
+  screenShake = 15;
+  
+  // Add dramatic sound effect (if sound was implemented)
+  // playSound("boss_appear");
+}
+
+// Create victory effect when boss is defeated
+function createVictoryEffect() {
+  // Create multiple explosions around the screen for victory effect
+  for (let i = 0; i < 20; i++) {
+    setTimeout(() => {
+      // Only create effect if game is still in playing state
+      if (gameState === GAME_PLAYING) {
+        // Random position for explosion
+        let x = random(width * 0.1, width * 0.9);
+        let y = random(height * 0.1, height * 0.6);
+        
+        // Create temporary explosion
+        let explosion = {
+          pos: createVector(x, y),
+          size: random(30, 80),
+          alpha: 255,
+          color: color(255, random(100, 200), 0),
+          life: 30
+        };
+        
+        // Add to temporary effects array (we'll need to create this)
+        visualEffects.push(explosion);
+        
+        // Add screen shake
+        screenShake = max(screenShake, 5);
+      }
+    }, i * 100); // Stagger explosions over time
+  }
+  
+  // Show "BOSS DEFEATED" message
+  let bossDefeatedMsg = {
+    text: "BOSS DEFEATED!",
+    pos: createVector(width/2, height/2),
+    size: gameWidth * 0.08,
+    alpha: 255,
+    color: color(255, 200, 0),
+    life: 120
+  };
+  
+  textEffects.push(bossDefeatedMsg);
+  
+  // Show level up message
+  let levelUpMsg = {
+    text: "LEVEL UP!",
+    pos: createVector(width/2, height/2 + 50),
+    size: gameWidth * 0.06,
+    alpha: 255,
+    color: color(100, 255, 100),
+    life: 120
+  };
+  
+  textEffects.push(levelUpMsg);
+}
+
+// Update visual effects
+function updateVisualEffects() {
+  // Update explosions and other visual effects
+  for (let i = visualEffects.length - 1; i >= 0; i--) {
+    // Reduce life and alpha
+    visualEffects[i].life--;
+    visualEffects[i].alpha = map(visualEffects[i].life, 0, 30, 0, 255);
+    
+    // Remove expired effects
+    if (visualEffects[i].life <= 0) {
+      visualEffects.splice(i, 1);
+    }
+  }
+  
+  // Update text effects
+  for (let i = textEffects.length - 1; i >= 0; i--) {
+    // Reduce life and alpha
+    textEffects[i].life--;
+    textEffects[i].alpha = map(textEffects[i].life, 0, 120, 0, 255);
+    
+    // Float text upward
+    textEffects[i].pos.y -= 0.5;
+    
+    // Remove expired effects
+    if (textEffects[i].life <= 0) {
+      textEffects.splice(i, 1);
+    }
+  }
+}
+
+// Draw visual effects
+function drawVisualEffects() {
+  // Draw explosions and other visual effects
+  for (let effect of visualEffects) {
+    noStroke();
+    
+    // Outer glow
+    let outerColor = color(effect.color.levels[0], effect.color.levels[1], effect.color.levels[2], effect.alpha * 0.5);
+    fill(outerColor);
+    ellipse(effect.pos.x, effect.pos.y, effect.size * 1.5, effect.size * 1.5);
+    
+    // Inner explosion
+    let innerColor = color(effect.color.levels[0], effect.color.levels[1], effect.color.levels[2], effect.alpha);
+    fill(innerColor);
+    ellipse(effect.pos.x, effect.pos.y, effect.size, effect.size);
+    
+    // Core
+    fill(255, 255, 255, effect.alpha);
+    ellipse(effect.pos.x, effect.pos.y, effect.size * 0.5, effect.size * 0.5);
+  }
+  
+  // Draw text effects
+  for (let effect of textEffects) {
+    // Add glow effect
+    drawingContext.shadowBlur = 10;
+    drawingContext.shadowColor = color(effect.color.levels[0], effect.color.levels[1], effect.color.levels[2], effect.alpha * 0.7);
+    
+    // Draw text
+    fill(effect.color.levels[0], effect.color.levels[1], effect.color.levels[2], effect.alpha);
+    textSize(effect.size);
+    text(effect.text, effect.pos.x, effect.pos.y);
+    
+    // Reset shadow
+    drawingContext.shadowBlur = 0;
+  }
+}
+
+// Create explosion effect at the given position
+function createExplosion(x, y, size, color) {
+  // Default values if not provided
+  size = size || 30;
+  color = color || color(255, 100, 0);
+  
+  // Create explosion effect
+  let explosion = {
+    pos: createVector(x, y),
+    size: size,
+    alpha: 255,
+    color: color,
+    life: 30
+  };
+  
+  visualEffects.push(explosion);
+  
+  // Create smaller particle effects
+  for (let i = 0; i < 5; i++) {
+    let particle = {
+      pos: createVector(
+        x + random(-size/2, size/2),
+        y + random(-size/2, size/2)
+      ),
+      size: size * random(0.2, 0.5),
+      alpha: 255,
+      color: color,
+      life: random(15, 25)
+    };
+    
+    visualEffects.push(particle);
+  }
 } 

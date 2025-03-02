@@ -372,7 +372,7 @@ class DestroyerBoss extends Boss {
     push();
     rotate(this.rotationAngle);
     
-    // Main body
+    // Main body - hexagonal shape
     fill(this.color);
     beginShape();
     for (let i = 0; i < 6; i++) {
@@ -383,17 +383,52 @@ class DestroyerBoss extends Boss {
     }
     endShape(CLOSE);
     
-    // Inner core
-    fill(255, 100, 100);
-    ellipse(0, 0, this.size * 0.6, this.size * 0.6);
+    // Add metallic highlights
+    noFill();
+    stroke(255, 255, 255, 100);
+    strokeWeight(2);
+    beginShape();
+    for (let i = 0; i < 6; i++) {
+      let angle = i * TWO_PI / 6;
+      let x = cos(angle) * this.size / 2.2;
+      let y = sin(angle) * this.size / 2.2;
+      vertex(x, y);
+    }
+    endShape(CLOSE);
     
-    // Weapon ports
+    // Inner core - pulsing reactor
+    let pulseSize = 0.6 + sin(frameCount * 0.1) * 0.05;
+    fill(255, 100, 100);
+    ellipse(0, 0, this.size * pulseSize, this.size * pulseSize);
+    
+    // Inner glow
+    fill(255, 200, 200, 150);
+    ellipse(0, 0, this.size * pulseSize * 0.7, this.size * pulseSize * 0.7);
+    
+    // Weapon ports - triangular shapes pointing outward
     fill(200, 200, 200);
     for (let i = 0; i < 3; i++) {
       let angle = i * TWO_PI / 3;
-      let x = cos(angle) * this.size * 0.4;
-      let y = sin(angle) * this.size * 0.4;
-      ellipse(x, y, this.size * 0.2, this.size * 0.2);
+      push();
+      translate(cos(angle) * this.size * 0.4, sin(angle) * this.size * 0.4);
+      rotate(angle + PI/2);
+      triangle(0, -this.size * 0.1, -this.size * 0.08, this.size * 0.05, this.size * 0.08, this.size * 0.05);
+      pop();
+    }
+    
+    // Engine exhausts - at the bottom
+    fill(255, 150, 50, 200 + sin(frameCount * 0.2) * 55);
+    for (let i = -1; i <= 1; i += 2) {
+      let x = i * this.size * 0.25;
+      let y = this.size * 0.4;
+      let flameHeight = this.size * (0.2 + sin(frameCount * 0.1 + i) * 0.05);
+      
+      // Flame shape
+      beginShape();
+      vertex(x - this.size * 0.1, y);
+      vertex(x + this.size * 0.1, y);
+      vertex(x, y + flameHeight);
+      endShape(CLOSE);
     }
     
     // Laser charging effect
@@ -416,6 +451,10 @@ class DestroyerBoss extends Boss {
       noStroke();
       fill(255, 50, 50, 200);
       rect(this.pos.x - this.laserWidth / 2, this.pos.y, this.laserWidth, height - this.pos.y);
+      
+      // Add glow to laser beam
+      fill(255, 100, 100, 100);
+      rect(this.pos.x - this.laserWidth * 1.2 / 2, this.pos.y, this.laserWidth * 1.2, height - this.pos.y);
       
       // Laser fades out
       this.laserWidth *= 0.9;
@@ -551,9 +590,15 @@ class MothershipBoss extends Boss {
   }
   
   drawBody() {
-    // Main body
+    // Main body - circular mothership
     fill(this.color);
     ellipse(0, 0, this.size, this.size);
+    
+    // Add metallic ring
+    noFill();
+    stroke(255, 255, 255, 150);
+    strokeWeight(3);
+    ellipse(0, 0, this.size * 0.85, this.size * 0.85);
     
     // Teleport flash effect
     if (this.teleportFlash > 0) {
@@ -561,26 +606,72 @@ class MothershipBoss extends Boss {
       stroke(255, 255, 255, this.teleportFlash * 12);
       strokeWeight(this.teleportFlash / 2);
       ellipse(0, 0, this.size * 1.5, this.size * 1.5);
+      
+      // Additional teleport particles
+      for (let i = 0; i < 8; i++) {
+        let angle = i * TWO_PI / 8 + frameCount * 0.05;
+        let distance = this.size * 0.8 * (this.teleportFlash / 20);
+        let x = cos(angle) * distance;
+        let y = sin(angle) * distance;
+        
+        fill(255, 200, 255, this.teleportFlash * 10);
+        ellipse(x, y, 10, 10);
+      }
     }
     
-    // Core
+    // Core - pulsing with energy
+    let pulseSize = 0.6 + sin(frameCount * 0.08) * 0.05;
     fill(150, 100, 255);
-    ellipse(0, 0, this.size * 0.6, this.size * 0.6);
+    ellipse(0, 0, this.size * pulseSize, this.size * pulseSize);
     
-    // Draw orbiting weapon points
+    // Inner glow
+    fill(200, 150, 255, 150);
+    ellipse(0, 0, this.size * pulseSize * 0.7, this.size * pulseSize * 0.7);
+    
+    // Draw orbiting weapon points with energy connections
     for (let i = 0; i < this.orbitPoints; i++) {
       let angle = this.orbitAngle + (i * TWO_PI / this.orbitPoints);
       let orbitX = cos(angle) * this.orbitDistance;
       let orbitY = sin(angle) * this.orbitDistance;
       
+      // Energy connection to core - pulsing
+      stroke(150, 100, 255, 150 + sin(frameCount * 0.1 + i) * 50);
+      strokeWeight(3 + sin(frameCount * 0.1 + i * 0.5) * 1);
+      line(0, 0, orbitX, orbitY);
+      
       // Weapon pod
       fill(200, 200, 255);
+      noStroke();
       ellipse(orbitX, orbitY, this.size * 0.25, this.size * 0.25);
       
-      // Energy connection to core
-      stroke(150, 100, 255, 150);
-      strokeWeight(3);
-      line(0, 0, orbitX, orbitY);
+      // Weapon pod glow
+      fill(255, 150, 150, 150);
+      ellipse(orbitX, orbitY, this.size * 0.15, this.size * 0.15);
+      
+      // Small decorative details on each pod
+      fill(255);
+      ellipse(orbitX, orbitY, this.size * 0.08, this.size * 0.08);
+    }
+    
+    // Bottom thrusters
+    for (let i = -2; i <= 2; i++) {
+      if (i !== 0) { // Skip the center
+        let x = i * this.size * 0.15;
+        let y = this.size * 0.4;
+        
+        // Thruster base
+        fill(100, 100, 150);
+        ellipse(x, y, this.size * 0.1, this.size * 0.1);
+        
+        // Flame
+        let flameHeight = this.size * (0.15 + sin(frameCount * 0.1 + i) * 0.05);
+        fill(255, 100, 50, 200 + sin(frameCount * 0.2 + i) * 55);
+        beginShape();
+        vertex(x - this.size * 0.05, y);
+        vertex(x + this.size * 0.05, y);
+        vertex(x, y + flameHeight);
+        endShape(CLOSE);
+      }
     }
     
     // Shield effect
