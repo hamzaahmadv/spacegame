@@ -32,30 +32,8 @@ class Star {
     this.twinkleAmount = random(0.3, 0.7);
     this.twinkleOffset = random(TWO_PI);
     
-    // Color variation
-    this.hue = random(1);
-    if (this.hue < 0.7) {
-      // 70% white/blue stars
-      this.color = color(
-        200 + random(55),
-        200 + random(55),
-        220 + random(35)
-      );
-    } else if (this.hue < 0.9) {
-      // 20% yellow/orange stars
-      this.color = color(
-        220 + random(35),
-        180 + random(75),
-        100 + random(50)
-      );
-    } else {
-      // 10% red stars
-      this.color = color(
-        220 + random(35),
-        100 + random(50),
-        100 + random(50)
-      );
-    }
+    // Set initial color
+    this.updateColor(1);
   }
   
   // Update star position for parallax scrolling
@@ -67,6 +45,149 @@ class Star {
     if (this.pos.y > height) {
       this.pos.y = 0;
       this.pos.x = random(width);
+    }
+  }
+  
+  // Update star color based on game level
+  updateColor(level) {
+    // Base color theme changes with level
+    let theme = (level - 1) % 5; // 5 different color themes
+    
+    // Color variation within the theme
+    this.hue = random(1);
+    
+    switch(theme) {
+      case 0: // Level 1: Blue theme (default)
+        if (this.hue < 0.7) {
+          // 70% white/blue stars
+          this.color = color(
+            200 + random(55),
+            200 + random(55),
+            220 + random(35)
+          );
+        } else if (this.hue < 0.9) {
+          // 20% yellow/orange stars
+          this.color = color(
+            220 + random(35),
+            180 + random(75),
+            100 + random(50)
+          );
+        } else {
+          // 10% red stars
+          this.color = color(
+            220 + random(35),
+            100 + random(50),
+            100 + random(50)
+          );
+        }
+        break;
+        
+      case 1: // Level 2: Purple nebula theme
+        if (this.hue < 0.6) {
+          // 60% purple stars
+          this.color = color(
+            150 + random(50),
+            50 + random(100),
+            200 + random(55)
+          );
+        } else if (this.hue < 0.9) {
+          // 30% pink stars
+          this.color = color(
+            200 + random(55),
+            100 + random(50),
+            200 + random(55)
+          );
+        } else {
+          // 10% blue stars
+          this.color = color(
+            50 + random(50),
+            100 + random(50),
+            220 + random(35)
+          );
+        }
+        break;
+        
+      case 2: // Level 3: Green nebula theme
+        if (this.hue < 0.6) {
+          // 60% green stars
+          this.color = color(
+            50 + random(100),
+            200 + random(55),
+            100 + random(50)
+          );
+        } else if (this.hue < 0.9) {
+          // 30% cyan stars
+          this.color = color(
+            50 + random(100),
+            200 + random(55),
+            200 + random(55)
+          );
+        } else {
+          // 10% yellow stars
+          this.color = color(
+            220 + random(35),
+            220 + random(35),
+            50 + random(50)
+          );
+        }
+        break;
+        
+      case 3: // Level 4: Orange/red nebula theme
+        if (this.hue < 0.6) {
+          // 60% orange stars
+          this.color = color(
+            220 + random(35),
+            150 + random(50),
+            50 + random(50)
+          );
+        } else if (this.hue < 0.9) {
+          // 30% red stars
+          this.color = color(
+            220 + random(35),
+            50 + random(100),
+            50 + random(50)
+          );
+        } else {
+          // 10% yellow stars
+          this.color = color(
+            220 + random(35),
+            220 + random(35),
+            50 + random(100)
+          );
+        }
+        break;
+        
+      case 4: // Level 5+: Multicolor cosmic theme
+        if (this.hue < 0.25) {
+          // 25% purple stars
+          this.color = color(
+            150 + random(100),
+            50 + random(100),
+            220 + random(35)
+          );
+        } else if (this.hue < 0.5) {
+          // 25% teal stars
+          this.color = color(
+            50 + random(100),
+            220 + random(35),
+            200 + random(55)
+          );
+        } else if (this.hue < 0.75) {
+          // 25% pink stars
+          this.color = color(
+            220 + random(35),
+            100 + random(100),
+            200 + random(55)
+          );
+        } else {
+          // 25% gold stars
+          this.color = color(
+            220 + random(35),
+            200 + random(55),
+            50 + random(100)
+          );
+        }
+        break;
     }
   }
   

@@ -1,19 +1,21 @@
 # Space Shooter Game
 
-A polished p5.js space shooter game with custom-drawn sprites and vertical phone-like UI.
+A polished p5.js space shooter game with custom-drawn sprites, vertical phone-like UI, and dynamic visual effects.
 
 ## Features
 
-- Custom-drawn sprites and assets (no external imports)
+- Custom-drawn sprites and assets with enhanced visual effects
 - Responsive player ship controls with both keyboard and touch support
 - Vertical phone-like UI optimized for mobile devices
+- Dynamic background and star colors that change with level progression
 - Diverse enemy types with unique movement patterns
-- Power-up system with multiple effects
+- Power-up system with multiple effects and visual feedback
 - Animated parallax star background
 - Progressive difficulty waves
-- Complete game state management (start/play/game over screens)
-- Collision detection
-- Score tracking with UI elements
+- Complete game state management with smooth transitions
+- Challenging one-life gameplay
+- Bullet trail effects and pulsing animations
+- Score tracking with high score system
 - Performance optimization
 - Visual feedback like screen shake on impacts
 - Well-structured, thoroughly commented object-oriented code
@@ -32,13 +34,25 @@ A polished p5.js space shooter game with custom-drawn sprites and vertical phone
 - **Tap Screen**: Start game / Restart after game over
 
 ### Gameplay
-1. Destroy enemy ships to earn points
-2. Collect power-ups for special abilities:
+1. You have only ONE life - be careful!
+2. Destroy enemy ships to earn points
+3. Collect power-ups for special abilities:
    - **Yellow Star**: Rapid Fire - Increases your firing rate
    - **Blue Circle**: Shield - Protects you from one hit
    - **Purple Square**: Multi Shot - Fires three bullets at once
-3. Survive as long as possible and aim for a high score
-4. The game gets progressively harder as your score increases
+4. Survive as long as possible and aim for a high score
+5. The game gets progressively harder as your score increases
+6. The background and stars change color as you advance through levels
+
+## Visual Effects
+
+- Dynamic star colors that change with each level
+- Changing background colors for different level themes
+- Enhanced bullet trails and pulsing effects
+- Engine glow and thruster animations
+- Shield particle effects
+- Smooth game over transitions
+- Screen shake on impacts
 
 ## Running the Game
 
@@ -66,9 +80,9 @@ This game has been optimized for mobile devices with:
 - `sketch.js`: Main game loop and state management
 - `player.js`: Player ship controls and rendering
 - `enemy.js`: Enemy types with different behaviors
-- `bullet.js`: Projectile mechanics
+- `bullet.js`: Projectile mechanics and visual effects
 - `powerup.js`: Power-up types and effects
-- `star.js`: Parallax background effect
+- `star.js`: Parallax background effect with dynamic colors
 
 ## Credits
 

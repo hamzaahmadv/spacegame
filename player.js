@@ -22,6 +22,7 @@ class Player {
     // Visual
     this.color = color(100, 200, 255);
     this.thrusterAnimation = 0;
+    this.engineGlow = 0;
     
     // State
     this.invulnerable = false;
@@ -84,6 +85,9 @@ class Player {
     
     // Animate thruster
     this.thrusterAnimation = (this.thrusterAnimation + 0.4) % 6;
+    
+    // Engine glow animation
+    this.engineGlow = (this.engineGlow + 0.05) % TWO_PI;
   }
   
   // Handle keyboard input
@@ -122,6 +126,9 @@ class Player {
     push();
     translate(this.pos.x, this.pos.y);
     
+    // Draw engine glow
+    this.drawEngineGlow();
+    
     // Draw thruster flame
     this.drawThruster();
     
@@ -131,6 +138,8 @@ class Player {
       if (frameCount % 6 < 3) {
         this.drawShip();
       }
+      // Draw shield flash effect when invulnerable
+      this.drawInvulnerableShield();
     } else {
       this.drawShip();
     }
@@ -141,6 +150,19 @@ class Player {
     }
     
     pop();
+  }
+  
+  // Draw engine glow effect
+  drawEngineGlow() {
+    // Only show engine glow when moving
+    if (this.vel.mag() > 0.2) {
+      let glowSize = this.size * (0.8 + sin(this.engineGlow) * 0.2);
+      let glowAlpha = 100 + sin(this.engineGlow) * 20;
+      
+      noStroke();
+      fill(50, 100, 255, glowAlpha);
+      ellipse(0, this.size / 4, glowSize, glowSize * 0.7);
+    }
   }
   
   // Draw the ship body
@@ -171,6 +193,17 @@ class Player {
     strokeWeight(1);
     line(-this.size / 3, this.size / 4, -this.size / 5, -this.size / 6);
     line(this.size / 3, this.size / 4, this.size / 5, -this.size / 6);
+    
+    // Add some details to make the ship look more polished
+    // Wing lights
+    noStroke();
+    fill(255, 100, 100, 200);
+    ellipse(-this.size / 3, this.size / 4, this.size / 10, this.size / 10);
+    ellipse(this.size / 3, this.size / 4, this.size / 10, this.size / 10);
+    
+    // Cockpit highlight
+    fill(255, 255, 255, 100);
+    ellipse(-this.size / 12, -this.size / 6 - this.size / 12, this.size / 10, this.size / 10);
   }
   
   // Draw thruster flame animation
@@ -194,6 +227,10 @@ class Player {
       vertex(0, this.size / 2 + 5 + sin(this.thrusterAnimation + 1) * 3);
       vertex(this.size / 10, this.size / 2);
       endShape(CLOSE);
+      
+      // Thruster base
+      fill(200, 200, 200);
+      rect(-this.size / 6, this.size / 2 - 2, this.size / 3, 4, 2);
     }
   }
   
@@ -208,6 +245,33 @@ class Player {
     stroke(0, 200, 255, 50);
     strokeWeight(8);
     ellipse(0, 0, this.size * 1.3, this.size * 1.3);
+    
+    // Shield particles
+    noStroke();
+    fill(0, 200, 255, 150);
+    for (let i = 0; i < 8; i++) {
+      let angle = frameCount * 0.05 + i * PI / 4;
+      let x = cos(angle) * this.size * 0.7;
+      let y = sin(angle) * this.size * 0.7;
+      let particleSize = 2 + sin(frameCount * 0.1 + i) * 1;
+      ellipse(x, y, particleSize, particleSize);
+    }
+  }
+  
+  // Draw invulnerability shield flash effect
+  drawInvulnerableShield() {
+    noFill();
+    let flashIntensity = map(this.invulnerableTimer, 0, this.invulnerableDuration, 0, 255);
+    stroke(255, 255, 255, flashIntensity);
+    strokeWeight(2);
+    
+    // Draw ripple effect
+    let rippleSize = map(this.invulnerableTimer, 0, this.invulnerableDuration, this.size * 2, this.size);
+    ellipse(0, 0, rippleSize, rippleSize);
+    
+    // Second ripple
+    stroke(255, 255, 255, flashIntensity * 0.5);
+    ellipse(0, 0, rippleSize * 1.2, rippleSize * 1.2);
   }
   
   // Fire a bullet
@@ -263,6 +327,10 @@ class Player {
   
   // Get collision radius for hit detection
   getCollisionRadius() {
+    // If shield is active, use larger radius
+    if (this.powerUpActive && this.powerUpType === 'shield') {
+      return this.size * 0.75;
+    }
     return this.size / 2;
   }
 } 
