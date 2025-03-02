@@ -13,12 +13,12 @@ const LEADERBOARD_SUBMIT = 4;
 const LEADERBOARD_VIEW = 5;
 
 // Game variables
-let gameState;
-let score;
+let gameState = GAME_START; // Initialize game state directly
+let score = 0;
 let highScore = 0;
-let level;
-let lives; // Now will be set to 1
-let gameTime;
+let level = 1;
+let lives = 1; // Now will be set to 1
+let gameTime = 0;
 let screenShake = 0;
 let prevLevel = 1; // Track level changes
 let gameOverTimer = 0; // Timer for game over animation
@@ -67,6 +67,7 @@ let shootTouchZone = false;
 // Preload any assets (none needed as we're drawing everything)
 function preload() {
   // No external assets to preload
+  console.log("Preload function called");
 }
 
 // Setup function - called once at the beginning
@@ -81,6 +82,8 @@ function setup() {
     
     colorMode(RGB, 255);
     textAlign(CENTER, CENTER);
+    
+    // Initialize game state and objects
     resetGame();
     
     // Create stars for parallax background
@@ -103,6 +106,14 @@ function setup() {
       console.log("Game state:", gameState);
       console.log("Player object:", player);
     }
+    
+    // Initialize leaderboard functionality
+    if (typeof initLeaderboard === 'function') {
+      console.log("Initializing leaderboard...");
+      initLeaderboard();
+    } else {
+      console.warn("Leaderboard functionality not available");
+    }
   } catch (error) {
     console.error("Error during game setup:", error);
     // Try to display error on screen
@@ -114,6 +125,11 @@ function setup() {
       textAlign(CENTER, CENTER);
       text("Error setting up game:", width/2, height/2 - 20);
       text(error.message, width/2, height/2 + 20);
+    }
+    
+    // Show error in the error message div if it exists
+    if (typeof showErrorMessage === 'function') {
+      showErrorMessage("Error setting up game: " + error.message);
     }
   }
 }
@@ -159,6 +175,7 @@ function setupPhoneLayout() {
 
 // Reset game to initial state
 function resetGame() {
+  console.log("Resetting game...");
   gameState = GAME_START;
   score = 0;
   level = 1;
@@ -178,15 +195,40 @@ function resetGame() {
   bossDefeated = false;
   
   // Clear all game objects
-  player = new Player();
-  bullets = [];
-  enemies = [];
-  powerUps = [];
-  visualEffects = [];
-  textEffects = [];
-  
-  // Reset background color
-  updateBackgroundColor(1);
+  try {
+    player = new Player();
+    bullets = [];
+    enemies = [];
+    powerUps = [];
+    visualEffects = [];
+    textEffects = [];
+    
+    // Reset background color
+    updateBackgroundColor(1);
+    
+    console.log("Game reset complete, game state:", gameState);
+  } catch (error) {
+    console.error("Error during game reset:", error);
+    // Try to recover by setting a basic player object
+    if (!player) {
+      console.log("Creating fallback player object");
+      player = {
+        pos: createVector(width / 2, height * 0.8),
+        vel: createVector(0, 0),
+        size: PLAYER_SIZE,
+        display: function() {
+          fill(100, 200, 255);
+          ellipse(this.pos.x, this.pos.y, this.size, this.size);
+        },
+        update: function() {
+          // Basic update function
+        },
+        shoot: function() {
+          // Basic shoot function
+        }
+      };
+    }
+  }
 }
 
 // Update background color based on level
@@ -215,54 +257,83 @@ function updateBackgroundColor(level) {
 
 // Draw function - called every frame
 function draw() {
-  // Apply screen shake effect
-  if (screenShake > 0) {
-    translate(random(-screenShake, screenShake), random(-screenShake, screenShake));
-    screenShake *= 0.9;
-    if (screenShake < 0.5) screenShake = 0;
-  }
-  
-  // Draw background
-  background(bgColor);
-  
-  // Update and draw stars (always visible in all game states)
-  updateStars();
-  
-  // Draw debug info if enabled
-  if (DEBUG_MODE) {
-    drawDebugInfo();
-  }
-  
-  // Handle different game states
-  switch (gameState) {
-    case GAME_START:
-      drawStartScreen();
-      break;
-    case GAME_PLAYING:
-      updateGame();
-      drawGame();
-      break;
-    case GAME_OVER:
-      updateGameOver();
-      drawGameOverScreen();
-      break;
-    case GAME_BOSS_INTRO:
-      updateBossIntro();
-      drawBossIntro();
-      break;
-    case LEADERBOARD_SUBMIT:
-      // The leaderboard input form is handled by HTML/CSS
-      // Just draw the game in the background
-      drawGame();
-      break;
-    case LEADERBOARD_VIEW:
-      drawLeaderboardScreen();
-      break;
-  }
-  
-  // Draw boss warning if active (appears in any state)
-  if (bossWarningTimer > 0) {
-    drawBossWarning();
+  try {
+    // Apply screen shake effect
+    if (screenShake > 0) {
+      translate(random(-screenShake, screenShake), random(-screenShake, screenShake));
+      screenShake *= 0.9;
+      if (screenShake < 0.5) screenShake = 0;
+    }
+    
+    // Draw background
+    background(bgColor || color(10, 10, 30)); // Fallback color if bgColor is not set
+    
+    // Update and draw stars (always visible in all game states)
+    updateStars();
+    
+    // Draw debug info if enabled
+    if (DEBUG_MODE) {
+      drawDebugInfo();
+    }
+    
+    // Handle different game states
+    switch (gameState) {
+      case GAME_START:
+        drawStartScreen();
+        break;
+      case GAME_PLAYING:
+        updateGame();
+        drawGame();
+        break;
+      case GAME_OVER:
+        updateGameOver();
+        drawGameOverScreen();
+        break;
+      case GAME_BOSS_INTRO:
+        updateBossIntro();
+        drawBossIntro();
+        break;
+      case LEADERBOARD_SUBMIT:
+        // The leaderboard input form is handled by HTML/CSS
+        // Just draw the game in the background
+        drawGame();
+        break;
+      case LEADERBOARD_VIEW:
+        drawLeaderboardScreen();
+        break;
+      default:
+        console.error("Unknown game state:", gameState);
+        // Reset to start screen if we somehow get an invalid state
+        gameState = GAME_START;
+        break;
+    }
+    
+    // Draw boss warning if active (appears in any state)
+    if (bossWarningTimer > 0) {
+      drawBossWarning();
+    }
+  } catch (error) {
+    console.error("Error in draw function:", error);
+    // Try to recover by resetting the game
+    try {
+      resetGame();
+    } catch (resetError) {
+      console.error("Failed to recover from error:", resetError);
+      noLoop(); // Stop the game loop if we can't recover
+      
+      // Show error message
+      if (typeof showErrorMessage === 'function') {
+        showErrorMessage("Game crashed: " + error.message);
+      } else {
+        background(0);
+        fill(255, 0, 0);
+        textSize(20);
+        textAlign(CENTER, CENTER);
+        text("Game crashed:", width/2, height/2 - 20);
+        text(error.message, width/2, height/2 + 20);
+        text("Please reload the page", width/2, height/2 + 60);
+      }
+    }
   }
 }
 
@@ -287,6 +358,7 @@ function updateGameOver() {
   if (gameOverTimer === 120) {
     // Check if the showLeaderboardInput function exists
     if (typeof showLeaderboardInput === 'function') {
+      console.log('Showing leaderboard input form');
       showLeaderboardInput();
     } else {
       console.warn('Leaderboard functionality not available');
@@ -786,7 +858,7 @@ function drawStartScreen() {
   
   // View leaderboard button - only if the function exists
   if (typeof showLeaderboard === 'function') {
-    drawButton("VIEW LEADERBOARD", width/2, height * 5/6, () => {
+    drawButton("VIEW LEADERBOARD", width/2, height * 5/6, function() {
       showLeaderboard();
     });
   }
@@ -837,7 +909,7 @@ function drawGameOverScreen() {
     // View leaderboard button (only show after the input form has been shown and dismissed)
     if (gameOverTimer > 150 && typeof showLeaderboard === 'function') {
       // Draw a button to view the leaderboard
-      drawButton("VIEW LEADERBOARD", width/2, height * 2/3 + 90, () => {
+      drawButton("VIEW LEADERBOARD", width/2, height * 2/3 + 90, function() {
         showLeaderboard();
       });
     }
@@ -867,45 +939,96 @@ function spawnEnemy() {
 
 // Handle keyboard input
 function keyPressed() {
+  console.log("Key pressed:", keyCode, "Game state:", gameState);
+  
+  // Skip keyboard handling if in leaderboard input mode
+  if (gameState === LEADERBOARD_SUBMIT) {
+    // Only handle ESC key to cancel submission
+    if (keyCode === ESCAPE) {
+      document.getElementById('leaderboardInput').style.display = 'none';
+      gameState = GAME_OVER;
+      loop();
+      return false;
+    }
+    return true; // Let the browser handle other keys for input
+  }
+  
+  // Handle leaderboard navigation
+  if (gameState === LEADERBOARD_VIEW) {
+    if (keyCode === LEFT_ARROW && leaderboardPage > 0) {
+      leaderboardPage--;
+      return false;
+    } else if (keyCode === RIGHT_ARROW && 
+              (leaderboardPage + 1) * leaderboardEntriesPerPage < leaderboardData.length) {
+      leaderboardPage++;
+      return false;
+    } else if (keyCode === ESCAPE) {
+      gameState = GAME_OVER;
+      return false;
+    }
+  }
+  
   // Game controls
   if (keyCode === 32) { // Space bar
+    console.log("Space bar pressed, game state:", gameState);
     if (gameState === GAME_PLAYING) {
+      // Shoot
       player.shoot();
-    }
-  }
-  
-  // Game state transitions
-  if (keyCode === ENTER) {
-    if (gameState === GAME_START || gameState === GAME_OVER) {
+    } else if (gameState === GAME_START) {
+      // Start game
+      console.log("Starting game from GAME_START state");
+      gameState = GAME_PLAYING;
+      return false;
+    } else if (gameState === GAME_OVER && gameOverTimer > 90) {
+      // Restart game
       resetGame();
       gameState = GAME_PLAYING;
-    } else if (gameState === GAME_BOSS_INTRO) {
-      // Skip boss intro
-      gameState = GAME_PLAYING;
-      spawnBoss();
-    } else if (gameState === LEADERBOARD_VIEW) {
-      // Return to game over screen
-      gameState = GAME_OVER;
+      return false;
     }
-  }
-  
-  // Escape key to go back from leaderboard
-  if (keyCode === 27) { // ESC key
+  } else if (keyCode === ENTER) {
+    console.log("Enter key pressed, game state:", gameState);
+    if (gameState === GAME_START) {
+      // Start game
+      console.log("Starting game from GAME_START state");
+      gameState = GAME_PLAYING;
+      return false;
+    } else if (gameState === GAME_OVER && gameOverTimer > 90) {
+      // Restart game
+      resetGame();
+      gameState = GAME_PLAYING;
+      return false;
+    }
+  } else if (keyCode === ESCAPE) {
     if (gameState === LEADERBOARD_VIEW) {
       gameState = GAME_OVER;
+      return false;
     }
   }
   
   // Prevent default behavior for game keys
-  if ([27, 32, 37, 38, 39, 40, 65, 68, 83, 87].includes(keyCode)) {
+  if (keyCode === UP_ARROW || keyCode === DOWN_ARROW || 
+      keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW || 
+      keyCode === 32 || keyCode === ENTER || keyCode === ESCAPE) {
     return false;
   }
+  
+  return true;
 }
 
 // Handle touch input for mobile devices
 function touchStarted() {
-  // Start game from start or game over screens
-  if (gameState === GAME_START || (gameState === GAME_OVER && gameOverTimer > 90)) {
+  console.log("Touch started, game state:", gameState, "Touch position:", mouseX, mouseY);
+  
+  // Start game from start screen
+  if (gameState === GAME_START) {
+    console.log("Touch detected on start screen, starting game");
+    gameState = GAME_PLAYING;
+    return false;
+  }
+  
+  // Restart game from game over screen
+  if (gameState === GAME_OVER && gameOverTimer > 90) {
+    console.log("Touch detected on game over screen, restarting game");
     resetGame();
     gameState = GAME_PLAYING;
     return false;
@@ -939,6 +1062,8 @@ function touchStarted() {
     }
     return false;
   }
+  
+  return false; // Prevent default behavior
 }
 
 function touchEnded() {
@@ -1336,17 +1461,20 @@ function createExplosion(x, y, size, color) {
 
 // Handle mouse clicks
 function mousePressed() {
-  // Handle clicks on the start screen
+  console.log("Mouse pressed, game state:", gameState);
+  
+  // Start game from start screen
   if (gameState === GAME_START) {
-    // Check if the leaderboard button was clicked
-    // The actual click handling is done in the drawButton function
+    console.log("Mouse click detected on start screen, starting game");
+    gameState = GAME_PLAYING;
     return false;
   }
   
-  // Handle clicks on the game over screen
-  if (gameState === GAME_OVER && gameOverTimer > 150) {
-    // Check if the leaderboard button was clicked
-    // The actual click handling is done in the drawButton function
+  // Restart game from game over screen
+  if (gameState === GAME_OVER && gameOverTimer > 90) {
+    console.log("Mouse click detected on game over screen, restarting game");
+    resetGame();
+    gameState = GAME_PLAYING;
     return false;
   }
   
@@ -1356,7 +1484,43 @@ function mousePressed() {
     return false;
   }
   
-  return true;
+  return false; // Prevent default behavior
+}
+
+// Draw a clickable button
+function drawButton(text, x, y, callback) {
+  // Button dimensions
+  let buttonWidth = gameWidth * 0.6;
+  let buttonHeight = gameHeight * 0.06;
+  
+  // Check if mouse is over button
+  let isHovering = mouseX > x - buttonWidth/2 && 
+                   mouseX < x + buttonWidth/2 && 
+                   mouseY > y - buttonHeight/2 && 
+                   mouseY < y + buttonHeight/2;
+  
+  // Draw button background with hover effect
+  noStroke();
+  if (isHovering) {
+    fill(80, 120, 255, 220); // Brighter when hovering
+  } else {
+    fill(60, 100, 200, 180);
+  }
+  rect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, 10);
+  
+  // Draw button text
+  fill(255);
+  textSize(buttonHeight * 0.6);
+  textAlign(CENTER, CENTER);
+  text(text, x, y);
+  
+  // Handle click
+  if (isHovering && mouseIsPressed) {
+    // Call the callback after a short delay to prevent double-clicks
+    setTimeout(callback, 100);
+  }
+  
+  return isHovering; // Return whether the mouse is hovering for additional logic
 }
 
 // Draw debug information

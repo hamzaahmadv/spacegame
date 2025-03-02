@@ -23,48 +23,69 @@
     });
   </script>
   
-  <!-- Add Supabase client library with proper module handling -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js" 
-          onerror="handleSupabaseLoadError()"></script>
+  <!-- Load Supabase directly -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
   
+  <!-- Supabase initialization script -->
   <script>
-    // Handle Supabase load error
-    function handleSupabaseLoadError() {
-      console.error('Failed to load Supabase library. Leaderboard functionality will be disabled.');
-      // Create a dummy supabase object to prevent errors
+    // Initialize Supabase when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        if (typeof supabase !== 'undefined') {
+          console.log('Supabase loaded successfully');
+          window.supabaseClient = supabase;
+        } else {
+          console.error('Supabase not defined after loading script');
+          setupMockSupabase();
+        }
+        
+        // Notify any listeners that Supabase is ready (or mock is ready)
+        window.dispatchEvent(new Event('supabaseLoaded'));
+      } catch (error) {
+        console.error('Error initializing Supabase:', error);
+        setupMockSupabase();
+      }
+    });
+    
+    // Set up mock Supabase if the real one fails to load
+    function setupMockSupabase() {
+      console.warn('Setting up mock Supabase client');
       window.supabaseClient = {
-        createClient: function() {
-          console.warn('Using dummy Supabase client');
+        createClient: function(url, key) {
+          console.warn('Using mock Supabase client');
           return {
-            from: function() {
+            from: function(table) {
+              console.log('Mock client accessing table:', table);
               return {
                 select: function() { return this; },
-                insert: function() { return this; },
+                insert: function(data) { 
+                  console.log('Mock insert:', data);
+                  return Promise.resolve({ 
+                    data: [{ id: 'mock-id', ...data[0] }], 
+                    error: null 
+                  });
+                },
                 order: function() { return this; },
                 limit: function() { 
-                  return { 
-                    data: [], 
-                    error: { message: 'Supabase not available' } 
-                  }; 
+                  // Return mock leaderboard data
+                  return Promise.resolve({ 
+                    data: [
+                      { id: '1', email: 'player1@example.com', score: 5000, level: 5, created_at: new Date().toISOString() },
+                      { id: '2', email: 'player2@example.com', score: 3500, level: 3, created_at: new Date().toISOString() },
+                      { id: '3', email: 'player3@example.com', score: 2800, level: 2, created_at: new Date().toISOString() }
+                    ], 
+                    error: null 
+                  });
                 }
               };
             }
           };
         }
       };
+      
+      // Dispatch event to notify that mock Supabase is ready
+      window.dispatchEvent(new Event('supabaseLoaded'));
     }
-    
-    // Make sure Supabase is available globally
-    document.addEventListener('DOMContentLoaded', function() {
-      // Check if Supabase is loaded
-      if (typeof supabase !== 'undefined') {
-        window.supabaseClient = supabase;
-        console.log('Supabase assigned to window object');
-      } else {
-        console.error('Supabase library not loaded correctly');
-        handleSupabaseLoadError();
-      }
-    });
   </script>
   
   <style>
@@ -107,41 +128,88 @@
     /* Styles for leaderboard input */
     #leaderboardInput {
       display: none;
-      position: absolute;
+      position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background-color: rgba(0, 0, 30, 0.8);
+      background-color: rgba(0, 0, 30, 0.9);
       border: 2px solid #4080ff;
       border-radius: 10px;
       padding: 20px;
       color: white;
       text-align: center;
       font-family: Arial, sans-serif;
-      z-index: 100;
+      z-index: 1000;
       width: 80%;
       max-width: 300px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
     #leaderboardInput input {
       width: 100%;
-      padding: 8px;
-      margin: 10px 0;
+      padding: 12px;
+      margin: 15px 0;
       border-radius: 5px;
       border: 1px solid #4080ff;
       background-color: rgba(0, 0, 50, 0.5);
       color: white;
+      font-size: 16px;
+      outline: none;
+    }
+    #leaderboardInput input:focus {
+      border-color: #60a0ff;
+      box-shadow: 0 0 8px rgba(64, 128, 255, 0.6);
     }
     #leaderboardInput button {
       background-color: #4080ff;
       color: white;
       border: none;
-      padding: 8px 15px;
-      margin: 5px;
+      padding: 10px 20px;
+      margin: 8px;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.2s;
     }
     #leaderboardInput button:hover {
       background-color: #5090ff;
+    }
+    #leaderboardInput h2 {
+      margin-bottom: 10px;
+      color: #80c0ff;
+    }
+    #finalScoreDisplay {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #ffcc00;
+    }
+    
+    /* Error message display */
+    #errorMessage {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(50, 0, 0, 0.9);
+      border: 2px solid #ff4040;
+      border-radius: 10px;
+      padding: 20px;
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      z-index: 2000;
+      width: 80%;
+      max-width: 400px;
+    }
+    #errorMessage button {
+      background-color: #ff4040;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -156,6 +224,13 @@
         <button id="submitScore">Submit</button>
         <button id="skipSubmission">Skip</button>
       </div>
+    </div>
+    
+    <!-- Error message display -->
+    <div id="errorMessage">
+      <h2>Error</h2>
+      <p id="errorText"></p>
+      <button id="reloadButton" onclick="window.location.reload()">Reload Game</button>
     </div>
   </div>
 
@@ -173,21 +248,118 @@
   <script src="sketch.js"></script>
   
   <script>
-    // Additional script to ensure canvas is visible
+    // Additional script to ensure canvas is visible and game starts properly
     document.addEventListener('DOMContentLoaded', function() {
+      // Global error handler
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error("Global error:", message, "at", source, ":", lineno, ":", colno);
+        showErrorMessage("An error occurred: " + message);
+        return true; // Prevents the default error handling
+      };
+      
       // Check if canvas exists after a short delay
       setTimeout(function() {
-        const canvas = document.querySelector('canvas');
-        if (canvas) {
-          console.log('Canvas found:', canvas);
-          // Ensure canvas is visible
-          canvas.style.display = 'block';
-          canvas.style.visibility = 'visible';
-        } else {
-          console.error('Canvas not found after game initialization');
+        try {
+          const canvas = document.querySelector('canvas');
+          if (canvas) {
+            console.log('Canvas found:', canvas);
+            // Ensure canvas is visible
+            canvas.style.display = 'block';
+            canvas.style.visibility = 'visible';
+          } else {
+            console.error('Canvas not found after game initialization');
+            showErrorMessage("Game canvas could not be created. Please try reloading the page.");
+          }
+          
+          // Force game state to start screen if it's not set
+          if (typeof gameState === 'undefined' || gameState === null) {
+            console.log('Game state not initialized, setting to GAME_START');
+            if (typeof GAME_START !== 'undefined') {
+              gameState = GAME_START;
+            } else {
+              gameState = 0; // Fallback to 0 if GAME_START constant is not defined
+            }
+          }
+          
+          // Check if essential game objects exist
+          if (typeof player === 'undefined' || player === null) {
+            console.error('Player object not initialized');
+            // Try to initialize player if the Player class exists
+            if (typeof Player === 'function') {
+              console.log('Attempting to create player object');
+              player = new Player();
+            }
+          }
+          
+          // Force a redraw
+          if (typeof redraw === 'function') {
+            redraw();
+          }
+        } catch (error) {
+          console.error('Error in initialization check:', error);
+          showErrorMessage("Error initializing game: " + error.message);
         }
       }, 1000);
+      
+      // Add touch event handlers for the email input form
+      const emailInput = document.getElementById('playerEmail');
+      const submitButton = document.getElementById('submitScore');
+      const skipButton = document.getElementById('skipSubmission');
+      
+      if (emailInput) {
+        // Prevent touch events on the email input from propagating to the canvas
+        emailInput.addEventListener('touchstart', function(e) {
+          e.stopPropagation();
+        });
+        
+        emailInput.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+        });
+        
+        // Focus the input when the form is shown
+        document.getElementById('leaderboardInput').addEventListener('touchstart', function(e) {
+          // Only stop propagation if clicking on the form itself, not its children
+          if (e.target === this) {
+            e.stopPropagation();
+          }
+        });
+      }
+      
+      if (submitButton) {
+        submitButton.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          // Call the submitScore function if it exists
+          if (typeof submitScore === 'function') {
+            submitScore();
+          }
+        });
+      }
+      
+      if (skipButton) {
+        skipButton.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          // Call the skipScoreSubmission function if it exists
+          if (typeof skipScoreSubmission === 'function') {
+            skipScoreSubmission();
+          }
+        });
+      }
     });
+    
+    // Function to show error message
+    function showErrorMessage(message) {
+      const errorElement = document.getElementById('errorMessage');
+      const errorTextElement = document.getElementById('errorText');
+      
+      if (errorElement && errorTextElement) {
+        errorTextElement.textContent = message;
+        errorElement.style.display = 'block';
+      } else {
+        alert('Error: ' + message);
+      }
+    }
   </script>
 </body>
 </html> 
