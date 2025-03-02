@@ -2,7 +2,7 @@
 // A complete p5.js space shooter with custom-drawn sprites and vertical phone-like UI
 
 // Debug mode
-const DEBUG_MODE = true; // Set to true to enable debug information
+const DEBUG_MODE = false; // Set to false to disable debug information
 
 // Game state constants
 const GAME_START = 0;
@@ -1488,7 +1488,7 @@ function mousePressed() {
 }
 
 // Draw a clickable button
-function drawButton(text, x, y, callback) {
+function drawButton(buttonText, x, y, callback) {
   // Button dimensions
   let buttonWidth = gameWidth * 0.6;
   let buttonHeight = gameHeight * 0.06;
@@ -1512,7 +1512,8 @@ function drawButton(text, x, y, callback) {
   fill(255);
   textSize(buttonHeight * 0.6);
   textAlign(CENTER, CENTER);
-  text(text, x, y);
+  // Make sure we're using a string
+  text(String(buttonText), x, y);
   
   // Handle click
   if (isHovering && mouseIsPressed) {

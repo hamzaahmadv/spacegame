@@ -26,77 +26,137 @@
   <!-- Load Supabase directly with better error handling -->
   <script 
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"
-    onload="console.log('Supabase script loaded successfully')"
+    onload="console.log('Supabase script loaded successfully'); initializeSupabaseAfterLoad();"
     onerror="console.error('Failed to load Supabase script'); setupMockSupabase()">
   </script>
   
   <!-- Supabase initialization script -->
   <script>
-    // Initialize Supabase when the page loads
-    document.addEventListener('DOMContentLoaded', function() {
-      try {
-        // Wait a moment to ensure Supabase is fully loaded
-        setTimeout(function() {
-          if (typeof supabase !== 'undefined') {
-            console.log('Supabase loaded successfully');
-            // Create the Supabase client directly
-            window.supabaseClient = supabase.createClient(
-              'https://qfwlprzvritrqhahemdq.supabase.co',
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmd2xwcnp2cml0cnFoYWhlbWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MTgwMzYsImV4cCI6MjA1NjQ5NDAzNn0.etI9YDqQ0DuetqiAomUUr0Vs1AL-pfjNnvPOIR6SQM8'
-            );
-            console.log('Supabase client created directly');
+    // Global variable to track if Supabase is initialized
+    window.supabaseInitialized = false;
+    
+    // Function to initialize Supabase after the script is loaded
+    function initializeSupabaseAfterLoad() {
+      console.log('Initializing Supabase after script load');
+      
+      // Check if the supabase object is available in the global scope
+      if (typeof window.supabase === 'undefined') {
+        console.error('Supabase object not available in window scope');
+        window.supabase = { createClient: null };
+      }
+      
+      // Wait a moment to ensure everything is fully loaded
+      setTimeout(function() {
+        try {
+          // Verify that supabase is defined and has the createClient method
+          if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+            console.log('Supabase loaded successfully with createClient method');
+            
+            try {
+              // Create the Supabase client directly
+              window.supabaseClient = window.supabase.createClient(
+                'https://qfwlprzvritrqhahemdq.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmd2xwcnp2cml0cnFoYWhlbWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MTgwMzYsImV4cCI6MjA1NjQ5NDAzNn0.etI9YDqQ0DuetqiAomUUr0Vs1AL-pfjNnvPOIR6SQM8'
+              );
+              
+              // Verify the client has the necessary methods
+              if (!window.supabaseClient || typeof window.supabaseClient.from !== 'function') {
+                console.error('Supabase client missing required methods');
+                setupMockSupabase();
+                return;
+              }
+              
+              window.supabaseInitialized = true;
+              console.log('Supabase client created successfully:', window.supabaseClient);
+              
+              // Test the client immediately
+              window.supabaseClient.from('leaderboard').select('*').limit(1)
+                .then(response => {
+                  if (response.error) {
+                    console.error('Supabase test query failed:', response.error);
+                    
+                    // If the error is because the table doesn't exist, that's okay
+                    // The leaderboard.js will handle table creation
+                    if (!response.error.message.includes('relation "leaderboard" does not exist')) {
+                      console.error('Unexpected Supabase error:', response.error);
+                    }
+                  } else {
+                    console.log('Supabase test query successful:', response.data);
+                  }
+                })
+                .catch(err => {
+                  console.error('Error testing Supabase connection:', err);
+                });
+              
+              // Notify any listeners that Supabase is ready
+              window.dispatchEvent(new CustomEvent('supabaseLoaded', { detail: { success: true } }));
+            } catch (error) {
+              console.error('Error creating Supabase client:', error);
+              setupMockSupabase();
+            }
           } else {
-            console.error('Supabase not defined after loading script');
+            console.error('Supabase not defined after loading script or missing createClient method');
+            console.log('window.supabase:', window.supabase);
             setupMockSupabase();
           }
-          
-          // Notify any listeners that Supabase is ready (or mock is ready)
-          window.dispatchEvent(new Event('supabaseLoaded'));
-        }, 500);
-      } catch (error) {
-        console.error('Error initializing Supabase:', error);
-        setupMockSupabase();
+        } catch (error) {
+          console.error('Error in Supabase initialization:', error);
+          setupMockSupabase();
+        }
+      }, 1000);
+    }
+    
+    // Initialize Supabase when the page loads (backup approach)
+    document.addEventListener('DOMContentLoaded', function() {
+      // Only initialize if not already done by the script onload handler
+      if (!window.supabaseInitialized) {
+        console.log('Initializing Supabase from DOMContentLoaded event');
+        initializeSupabaseAfterLoad();
       }
     });
     
     // Set up mock Supabase if the real one fails to load
     function setupMockSupabase() {
       console.warn('Setting up mock Supabase client');
+      
+      // Create a more comprehensive mock client
       window.supabaseClient = {
-        createClient: function(url, key) {
-          console.warn('Using mock Supabase client');
+        from: function(table) {
+          console.log('Mock client accessing table:', table);
           return {
-            from: function(table) {
-              console.log('Mock client accessing table:', table);
-              return {
-                select: function() { return this; },
-                insert: function(data) { 
-                  console.log('Mock insert:', data);
-                  return Promise.resolve({ 
-                    data: [{ id: 'mock-id', ...data[0] }], 
-                    error: null 
-                  });
-                },
-                order: function() { return this; },
-                limit: function() { 
-                  // Return mock leaderboard data
-                  return Promise.resolve({ 
-                    data: [
-                      { id: '1', email: 'player1@example.com', score: 5000, level: 5, created_at: new Date().toISOString() },
-                      { id: '2', email: 'player2@example.com', score: 3500, level: 3, created_at: new Date().toISOString() },
-                      { id: '3', email: 'player3@example.com', score: 2800, level: 2, created_at: new Date().toISOString() }
-                    ], 
-                    error: null 
-                  });
-                }
-              };
+            select: function() { return this; },
+            insert: function(data) { 
+              console.log('Mock insert:', data);
+              return Promise.resolve({ 
+                data: [{ id: 'mock-id', ...data[0] }], 
+                error: null 
+              });
+            },
+            order: function() { return this; },
+            limit: function() { 
+              // Return mock leaderboard data
+              return Promise.resolve({ 
+                data: [
+                  { id: '1', email: 'player1@example.com', score: 5000, level: 5, created_at: new Date().toISOString() },
+                  { id: '2', email: 'player2@example.com', score: 3500, level: 3, created_at: new Date().toISOString() },
+                  { id: '3', email: 'player3@example.com', score: 2800, level: 2, created_at: new Date().toISOString() }
+                ], 
+                error: null 
+              });
             }
           };
+        },
+        rpc: function(procedureName, params) {
+          console.log('Mock RPC call to:', procedureName, params);
+          return Promise.resolve({ data: null, error: null });
         }
       };
       
+      window.supabaseInitialized = true;
+      
       // Dispatch event to notify that mock Supabase is ready
-      window.dispatchEvent(new Event('supabaseLoaded'));
+      window.dispatchEvent(new CustomEvent('supabaseLoaded', { detail: { success: false, mock: true } }));
+      console.log('Mock Supabase client setup complete');
     }
   </script>
   

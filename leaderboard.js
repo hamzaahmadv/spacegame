@@ -5,9 +5,6 @@
 const SUPABASE_URL = 'https://qfwlprzvritrqhahemdq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmd2xwcnp2cml0cnFoYWhlbWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MTgwMzYsImV4cCI6MjA1NjQ5NDAzNn0.etI9YDqQ0DuetqiAomUUr0Vs1AL-pfjNnvPOIR6SQM8';
 
-// Initialize Supabase client
-let supabase;
-
 // Leaderboard variables
 let leaderboardData = [];
 let leaderboardPage = 0;
@@ -15,25 +12,48 @@ let leaderboardEntriesPerPage = 10;
 let isLeaderboardLoading = false;
 let leaderboardError = null;
 
+// Initialize Supabase client
+let supabase = null;
+
+// Try to initialize Supabase client immediately if it's already loaded
+if (typeof window !== 'undefined' && window.supabaseClient) {
+  supabase = window.supabaseClient;
+  console.log('Supabase client initialized from window.supabaseClient');
+} else {
+  console.log('Supabase client not available yet, will initialize later');
+  
+  // Listen for the supabaseLoaded event
+  if (typeof window !== 'undefined') {
+    window.addEventListener('supabaseLoaded', function(event) {
+      if (window.supabaseClient) {
+        supabase = window.supabaseClient;
+        console.log('Supabase client initialized from supabaseLoaded event');
+        
+        // Test the connection if we already have a client
+        if (typeof testSupabaseConnection === 'function') {
+          testSupabaseConnection();
+        }
+      } else {
+        console.error('supabaseLoaded event fired but window.supabaseClient is not available');
+        if (typeof createMockSupabaseClient === 'function') {
+          createMockSupabaseClient();
+        }
+      }
+    });
+  }
+}
+
 // Initialize leaderboard functionality
 function initLeaderboard() {
   try {
     console.log('Initializing leaderboard functionality...');
     
-    // Try to initialize Supabase client
-    if (typeof window.supabaseClient !== 'undefined') {
-      console.log('Supabase client found, initializing...');
+    // Try to initialize Supabase client if not already initialized
+    if (!supabase) {
       initSupabaseClient();
     } else {
-      console.log('Supabase client not found, waiting for it to load...');
-      
-      // Listen for the supabaseLoaded event
-      window.addEventListener('supabaseLoaded', function supabaseLoadedHandler() {
-        console.log('Received supabaseLoaded event');
-        initSupabaseClient();
-        // Remove the event listener after it's been handled
-        window.removeEventListener('supabaseLoaded', supabaseLoadedHandler);
-      });
+      // Test the connection if we already have a client
+      testSupabaseConnection();
     }
     
     // Set up event listeners for the leaderboard form
@@ -65,31 +85,75 @@ function initSupabaseClient() {
   try {
     console.log('Creating Supabase client with URL:', SUPABASE_URL);
     
-    if (!window.supabaseClient) {
-      console.error('window.supabaseClient is not defined');
+    // First check if window.supabaseClient is already available
+    if (window.supabaseClient) {
+      console.log('Using existing window.supabaseClient');
+      supabase = window.supabaseClient;
       
-      // Try to create the client directly if supabase is available globally
-      if (typeof supabase !== 'undefined') {
-        console.log('Creating Supabase client directly using global supabase object');
-        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log('Supabase client created directly');
-      } else {
-        console.error('Global supabase object not available, falling back to mock client');
+      // Verify that the client has the necessary methods
+      if (typeof supabase.from !== 'function') {
+        console.error('Existing Supabase client is missing required methods');
         createMockSupabaseClient();
         return;
       }
-    } else {
-      // Use the client created in index.html
-      console.log('Using Supabase client from window.supabaseClient');
-      supabase = window.supabaseClient;
+      
+      console.log('Supabase client initialized successfully from window.supabaseClient');
+      testSupabaseConnection();
+      return;
     }
     
-    console.log('Supabase client initialized successfully');
+    // If window.supabase is available, try to create a client
+    if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+      console.log('Creating Supabase client using window.supabase');
+      try {
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabase = window.supabaseClient;
+        console.log('Supabase client created successfully');
+        testSupabaseConnection();
+        return;
+      } catch (e) {
+        console.error('Error creating Supabase client:', e);
+      }
+    }
     
-    // Test the connection
-    testSupabaseConnection();
+    // If we still don't have a client, try to load Supabase from CDN
+    console.log('Attempting to load Supabase from CDN');
+    
+    // Check if the script is already in the DOM
+    if (!document.querySelector('script[src*="supabase"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js';
+      
+      script.onload = function() {
+        console.log('Supabase loaded from CDN');
+        try {
+          if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase = window.supabaseClient;
+            console.log('Supabase client created after CDN load');
+            testSupabaseConnection();
+          } else {
+            console.error('Supabase still not available after CDN load');
+            createMockSupabaseClient();
+          }
+        } catch (cdnError) {
+          console.error('Error initializing Supabase after CDN load:', cdnError);
+          createMockSupabaseClient();
+        }
+      };
+      
+      script.onerror = function() {
+        console.error('Failed to load Supabase from CDN');
+        createMockSupabaseClient();
+      };
+      
+      document.head.appendChild(script);
+    } else {
+      console.error('Supabase script already in DOM but not working');
+      createMockSupabaseClient();
+    }
   } catch (error) {
-    console.error('Error creating Supabase client:', error);
+    console.error('Error in initSupabaseClient:', error);
     createMockSupabaseClient();
   }
 }
@@ -100,37 +164,130 @@ async function testSupabaseConnection() {
     console.log('Testing Supabase connection...');
     
     // Check if supabase client has the required methods
-    if (!supabase || !supabase.from) {
-      console.error('Supabase client is not properly initialized');
+    if (!supabase || typeof supabase.from !== 'function') {
+      console.error('Supabase client is not properly initialized for connection test');
       createMockSupabaseClient();
       return;
     }
     
-    // Set a timeout to prevent hanging if the connection takes too long
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Connection test timed out')), 5000);
-    });
-    
-    // Simple query to test connection
-    const connectionPromise = supabase
-      .from('leaderboard')
-      .select('*')
-      .limit(1);
-    
-    // Race between the connection and the timeout
-    const { data, error } = await Promise.race([
-      connectionPromise,
-      timeoutPromise
-    ]);
-    
-    if (error) {
-      console.error('Supabase connection test failed:', error);
+    try {
+      // Set a timeout to prevent hanging if the connection takes too long
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection test timed out')), 8000);
+      });
+      
+      // Simple query to test connection
+      const connectionPromise = supabase
+        .from('leaderboard')
+        .select('*')
+        .limit(1);
+      
+      // Race between the connection and the timeout
+      const { data, error } = await Promise.race([
+        connectionPromise,
+        timeoutPromise
+      ]);
+      
+      if (error) {
+        console.error('Supabase connection test failed:', error);
+        
+        // If the error is because the table doesn't exist, try to create it
+        if (error.code === '42P01' || 
+            (error.message && error.message.includes('relation "leaderboard" does not exist'))) {
+          console.log('Leaderboard table does not exist, attempting to create it');
+          await createLeaderboardTable();
+        } else {
+          console.error('Connection error not related to missing table:', error);
+          createMockSupabaseClient();
+        }
+      } else {
+        console.log('Supabase connection test successful, found data:', data);
+      }
+    } catch (queryError) {
+      console.error('Error during connection test query:', queryError);
       createMockSupabaseClient();
-    } else {
-      console.log('Supabase connection test successful, found data:', data);
     }
   } catch (error) {
     console.error('Error testing Supabase connection:', error);
+    createMockSupabaseClient();
+  }
+}
+
+// Create the leaderboard table if it doesn't exist
+async function createLeaderboardTable() {
+  try {
+    console.log('Attempting to create leaderboard table...');
+    
+    // Check if we have access to the Supabase REST API
+    if (!supabase || typeof supabase.rpc !== 'function') {
+      console.error('Supabase client does not have RPC method, cannot create table');
+      createMockSupabaseClient();
+      return;
+    }
+    
+    // Note: Creating tables requires database admin privileges
+    // This is just a fallback that might work in some cases with proper permissions
+    // In most cases, you would create the table through the Supabase dashboard
+    
+    try {
+      // Try to create the table using a stored procedure (if available)
+      const { error } = await supabase.rpc('create_leaderboard_table_if_not_exists');
+      
+      if (error) {
+        console.error('Failed to create leaderboard table via RPC:', error);
+        
+        // Store the error in local storage for debugging
+        const errors = JSON.parse(localStorage.getItem('supabaseErrors') || '[]');
+        errors.push({
+          timestamp: new Date().toISOString(),
+          message: error.message,
+          code: error.code,
+          details: error.details
+        });
+        localStorage.setItem('supabaseErrors', JSON.stringify(errors));
+        
+        // If the RPC method doesn't exist, we can't create the table from the client
+        // This is expected in most cases as table creation requires admin privileges
+        console.warn('Unable to create table from client, switching to offline mode');
+        createMockSupabaseClient();
+        return;
+      }
+      
+      console.log('Leaderboard table created successfully via RPC');
+      
+      // Test the connection again
+      try {
+        const { data, error: testError } = await supabase
+          .from('leaderboard')
+          .select('*')
+          .limit(1);
+        
+        if (testError) {
+          console.error('Table created but test query failed:', testError);
+          createMockSupabaseClient();
+        } else {
+          console.log('Table created and test query successful:', data);
+        }
+      } catch (testError) {
+        console.error('Error testing newly created table:', testError);
+        createMockSupabaseClient();
+      }
+    } catch (rpcError) {
+      console.error('Exception during table creation RPC call:', rpcError);
+      
+      // Store the error in local storage for debugging
+      const errors = JSON.parse(localStorage.getItem('supabaseErrors') || '[]');
+      errors.push({
+        timestamp: new Date().toISOString(),
+        message: rpcError.message,
+        stack: rpcError.stack
+      });
+      localStorage.setItem('supabaseErrors', JSON.stringify(errors));
+      
+      createMockSupabaseClient();
+    }
+  } catch (error) {
+    console.error('Error creating leaderboard table:', error);
     createMockSupabaseClient();
   }
 }
@@ -167,10 +324,24 @@ function createMockSupabaseClient() {
           });
         }
       };
+    },
+    rpc: function(procedureName, params) {
+      console.log('Mock RPC call to:', procedureName, params);
+      return Promise.resolve({ data: null, error: null });
     }
   };
   
+  // Also set the global supabaseClient
+  window.supabaseClient = supabase;
+  
   console.log('Mock Supabase client created successfully');
+  
+  // Dispatch event to notify that mock Supabase is ready
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('supabaseLoaded', { 
+      detail: { success: false, mock: true } 
+    }));
+  }
 }
 
 // Show the leaderboard input form
@@ -256,74 +427,162 @@ async function submitScore() {
     
     console.log(`Submitting score: ${score} for email: ${email}`);
     
-    // Check if supabase is initialized
-    if (!supabase) {
-      console.error('Supabase client not initialized');
-      alert('You are in offline mode. Your score will be saved locally.');
-      
-      // Save to local storage in offline mode
-      const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
-      offlineScores.push({ email, score, created_at: new Date().toISOString() });
-      localStorage.setItem('offlineScores', JSON.stringify(offlineScores));
-      
-      // Hide the input form
-      document.getElementById('leaderboardInput').style.display = 'none';
-      
-      // Update game state
-      gameState = GAME_OVER;
-      
-      // Resume the game loop
-      loop();
-      return;
+    // Show loading indicator
+    const submitButton = document.getElementById('submitScore');
+    if (submitButton) {
+      submitButton.textContent = 'Submitting...';
+      submitButton.disabled = true;
     }
     
-    // Show loading indicator
-    document.getElementById('submitScore').textContent = 'Submitting...';
-    document.getElementById('submitScore').disabled = true;
+    // Check if supabase is initialized
+    if (!supabase || typeof supabase.from !== 'function') {
+      console.error('Supabase client not initialized or missing from method');
+      
+      // Try to initialize it one more time
+      initSupabaseClient();
+      
+      // Wait a moment for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // If still not initialized, use offline mode
+      if (!supabase || typeof supabase.from !== 'function') {
+        console.warn('Still unable to initialize Supabase, using offline mode');
+        alert('You are in offline mode. Your score will be saved locally.');
+        
+        // Save to local storage in offline mode
+        const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+        offlineScores.push({ 
+          email, 
+          score, 
+          level, 
+          created_at: new Date().toISOString() 
+        });
+        localStorage.setItem('offlineScores', JSON.stringify(offlineScores));
+        
+        // Hide the input form
+        const leaderboardInput = document.getElementById('leaderboardInput');
+        if (leaderboardInput) {
+          leaderboardInput.style.display = 'none';
+        }
+        
+        // Update game state
+        gameState = GAME_OVER;
+        
+        // Resume the game loop
+        if (typeof loop === 'function') {
+          loop();
+        }
+        
+        // Reset button state
+        if (submitButton) {
+          submitButton.textContent = 'Submit';
+          submitButton.disabled = false;
+        }
+        
+        return;
+      }
+    }
     
-    // Insert the score into the leaderboard table
-    const { data, error } = await supabase
-      .from('leaderboard')
-      .insert([
-        { email, score }
-      ]);
+    console.log('Inserting score into Supabase:', { email, score, level });
     
-    if (error) {
-      console.error('Error submitting score:', error);
-      alert('Failed to submit score. Please try again later.');
+    try {
+      // Insert the score into the leaderboard table with level information
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .insert([
+          { email, score, level }
+        ]);
+      
+      if (error) {
+        console.error('Error submitting score:', error);
+        
+        // More detailed error message
+        let errorMessage = 'Failed to submit score. ';
+        if (error.code === '23505') {
+          errorMessage += 'You have already submitted a score with this email.';
+        } else if (error.code === '23503') {
+          errorMessage += 'Database constraint error.';
+        } else if (error.code === '42P01') {
+          errorMessage += 'Leaderboard table not found.';
+        } else {
+          errorMessage += 'Please try again later. Error: ' + error.message;
+        }
+        
+        alert(errorMessage);
+        
+        // Save to local storage if submission fails
+        const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+        offlineScores.push({ 
+          email, 
+          score, 
+          level, 
+          created_at: new Date().toISOString(),
+          error: error.message
+        });
+        localStorage.setItem('offlineScores', JSON.stringify(offlineScores));
+        
+        // Reset button state
+        if (submitButton) {
+          submitButton.textContent = 'Submit';
+          submitButton.disabled = false;
+        }
+      } else {
+        console.log('Score submitted successfully:', data);
+        alert('Score submitted successfully!');
+        
+        // Hide the input form
+        const leaderboardInput = document.getElementById('leaderboardInput');
+        if (leaderboardInput) {
+          leaderboardInput.style.display = 'none';
+        }
+        
+        // Reload leaderboard data to include the new score
+        await loadLeaderboardData();
+        
+        // Update game state to show the leaderboard
+        gameState = LEADERBOARD_VIEW;
+      }
+    } catch (insertError) {
+      console.error('Exception during score insertion:', insertError);
+      alert('An error occurred while submitting your score. Please try again.');
       
       // Save to local storage if submission fails
       const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
-      offlineScores.push({ email, score, created_at: new Date().toISOString() });
+      offlineScores.push({ 
+        email, 
+        score, 
+        level, 
+        created_at: new Date().toISOString(),
+        error: insertError.message
+      });
       localStorage.setItem('offlineScores', JSON.stringify(offlineScores));
       
-      document.getElementById('submitScore').textContent = 'Submit';
-      document.getElementById('submitScore').disabled = false;
-    } else {
-      console.log('Score submitted successfully:', data);
-      alert('Score submitted successfully!');
-      
-      // Hide the input form
-      document.getElementById('leaderboardInput').style.display = 'none';
-      
-      // Reload leaderboard data to include the new score
-      await loadLeaderboardData();
-      
-      // Update game state to show the leaderboard
-      gameState = LEADERBOARD_VIEW;
+      // Reset button state
+      if (submitButton) {
+        submitButton.textContent = 'Submit';
+        submitButton.disabled = false;
+      }
     }
     
     // Resume the game loop
-    loop();
+    if (typeof loop === 'function') {
+      loop();
+    }
   } catch (error) {
     console.error('Error in submitScore:', error);
     alert('An error occurred while submitting your score. Please try again.');
     
-    document.getElementById('submitScore').textContent = 'Submit';
-    document.getElementById('submitScore').disabled = false;
+    // Reset button state
+    const submitButton = document.getElementById('submitScore');
+    if (submitButton) {
+      submitButton.textContent = 'Submit';
+      submitButton.disabled = false;
+    }
     
     // Resume the game loop
-    loop();
+    if (typeof loop === 'function') {
+      loop();
+    }
   }
 }
 
@@ -367,43 +626,144 @@ async function loadLeaderboardData() {
     leaderboardError = null;
     
     // Check if supabase is initialized
-    if (!supabase) {
-      console.error('Supabase client not initialized');
-      leaderboardError = 'Leaderboard unavailable (offline mode)';
-      isLeaderboardLoading = false;
-      return;
+    if (!supabase || typeof supabase.from !== 'function') {
+      console.error('Supabase client not initialized for loading leaderboard data');
+      
+      // Try to initialize it one more time
+      initSupabaseClient();
+      
+      // Wait a moment for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // If still not initialized, use offline mode
+      if (!supabase || typeof supabase.from !== 'function') {
+        console.warn('Still unable to initialize Supabase for leaderboard, using offline mode');
+        leaderboardError = 'Leaderboard unavailable (offline mode)';
+        
+        // Get any offline scores
+        const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+        
+        if (offlineScores.length > 0) {
+          console.log('Using offline scores:', offlineScores);
+          leaderboardData = offlineScores;
+        } else {
+          console.log('No offline scores found, using mock data');
+          leaderboardData = generateMockLeaderboardData();
+        }
+        
+        isLeaderboardLoading = false;
+        return;
+      }
     }
     
     console.log('Fetching leaderboard data from Supabase...');
-    const { data, error } = await supabase
-      .from('leaderboard')
-      .select('*')
-      .order('score', { ascending: false })
-      .limit(100);
     
-    if (error) {
-      console.error('Error loading leaderboard data:', error);
-      leaderboardError = 'Failed to load leaderboard data';
-      isLeaderboardLoading = false;
-      return;
-    }
-    
-    if (data && data.length > 0) {
-      console.log('Leaderboard data loaded successfully:', data);
-      leaderboardData = data;
-    } else {
-      console.log('No leaderboard data found, using mock data');
-      // Use mock data if no data is returned
-      leaderboardData = generateMockLeaderboardData();
+    try {
+      // Set a timeout to prevent hanging if the query takes too long
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Leaderboard query timed out')), 10000);
+      });
+      
+      // Query to get leaderboard data
+      const queryPromise = supabase
+        .from('leaderboard')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(100);
+      
+      // Race between the query and the timeout
+      const { data, error } = await Promise.race([
+        queryPromise,
+        timeoutPromise
+      ]);
+      
+      if (error) {
+        console.error('Error loading leaderboard data:', error);
+        leaderboardError = 'Failed to load leaderboard data: ' + error.message;
+        
+        // Try to use offline scores if available
+        const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+        
+        if (offlineScores.length > 0) {
+          console.log('Using offline scores due to error:', offlineScores);
+          leaderboardData = offlineScores;
+        } else {
+          console.log('No offline scores found, using mock data');
+          leaderboardData = generateMockLeaderboardData();
+        }
+      } else if (data && data.length > 0) {
+        console.log('Leaderboard data loaded successfully:', data);
+        
+        // Get any offline scores
+        const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+        
+        if (offlineScores.length > 0) {
+          console.log('Merging offline scores with online data');
+          
+          // Merge offline scores with online data
+          const mergedData = [...data];
+          
+          // Add offline scores that aren't already in the online data
+          for (const offlineScore of offlineScores) {
+            // Skip if this score has an error or is already in the online data
+            if (offlineScore.error) continue;
+            
+            // Check if this score is already in the online data
+            const isDuplicate = data.some(onlineScore => 
+              onlineScore.email === offlineScore.email && 
+              onlineScore.score === offlineScore.score &&
+              onlineScore.level === offlineScore.level
+            );
+            
+            if (!isDuplicate) {
+              mergedData.push(offlineScore);
+            }
+          }
+          
+          // Sort by score (descending)
+          mergedData.sort((a, b) => b.score - a.score);
+          
+          leaderboardData = mergedData;
+        } else {
+          leaderboardData = data;
+        }
+      } else {
+        console.log('No leaderboard data found, using mock data');
+        // Use mock data if no data is returned
+        leaderboardData = generateMockLeaderboardData();
+      }
+    } catch (queryError) {
+      console.error('Error querying leaderboard data:', queryError);
+      leaderboardError = 'Error loading leaderboard: ' + queryError.message;
+      
+      // Try to use offline scores if available
+      const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+      
+      if (offlineScores.length > 0) {
+        console.log('Using offline scores due to query error:', offlineScores);
+        leaderboardData = offlineScores;
+      } else {
+        // Use mock data in case of error
+        leaderboardData = generateMockLeaderboardData();
+      }
     }
     
     isLeaderboardLoading = false;
   } catch (error) {
     console.error('Error in loadLeaderboardData:', error);
-    leaderboardError = 'Error loading leaderboard';
+    leaderboardError = 'Error loading leaderboard: ' + error.message;
     isLeaderboardLoading = false;
-    // Use mock data in case of error
-    leaderboardData = generateMockLeaderboardData();
+    
+    // Try to use offline scores if available
+    const offlineScores = JSON.parse(localStorage.getItem('offlineScores') || '[]');
+    
+    if (offlineScores.length > 0) {
+      console.log('Using offline scores due to error:', offlineScores);
+      leaderboardData = offlineScores;
+    } else {
+      // Use mock data in case of error
+      leaderboardData = generateMockLeaderboardData();
+    }
   }
 }
 
@@ -422,16 +782,27 @@ function drawLeaderboard() {
       ellipse(stars[i].x, stars[i].y, stars[i].size);
     }
     
-    // Draw leaderboard title
+    // Draw leaderboard title with glow effect
+    drawingContext.shadowBlur = 15;
+    drawingContext.shadowColor = color(100, 150, 255, 200);
     fill(255);
     textSize(32);
     textAlign(CENTER);
     text('LEADERBOARD', width / 2, 60);
+    drawingContext.shadowBlur = 0;
     
     // Draw loading indicator or error message
     if (isLeaderboardLoading) {
+      // Animated loading indicator
       textSize(18);
       text('Loading leaderboard data...', width / 2, height / 2);
+      
+      // Draw animated dots
+      let dots = '';
+      for (let i = 0; i < (frameCount / 15) % 4; i++) {
+        dots += '.';
+      }
+      text(dots, width / 2 + 100, height / 2);
       return;
     }
     
@@ -439,6 +810,9 @@ function drawLeaderboard() {
       textSize(18);
       fill(255, 100, 100);
       text(leaderboardError, width / 2, 100);
+      fill(200);
+      textSize(16);
+      text('Check your internet connection and try again later', width / 2, 130);
       fill(255);
     }
     
@@ -457,73 +831,142 @@ function drawLeaderboard() {
     const startIndex = leaderboardPage * leaderboardEntriesPerPage;
     const endIndex = Math.min(startIndex + leaderboardEntriesPerPage, leaderboardData.length);
     
-    // Draw column headers
+    // Draw column headers with background
+    fill(30, 30, 60, 200);
+    rect(width * 0.05, 85, width * 0.9, 30, 5);
+    
     textSize(16);
     textAlign(LEFT);
     fill(200, 200, 255);
-    text('RANK', width * 0.1, 100);
-    text('PLAYER', width * 0.2, 100);
-    text('SCORE', width * 0.7, 100);
+    text('RANK', width * 0.1, 105);
+    text('PLAYER', width * 0.2, 105);
+    text('SCORE', width * 0.6, 105);
+    text('LEVEL', width * 0.8, 105);
     
     // Draw horizontal line
     stroke(100, 100, 200);
-    line(width * 0.05, 110, width * 0.95, 110);
+    line(width * 0.05, 120, width * 0.95, 120);
     noStroke();
     
-    // Draw leaderboard entries
+    // Draw leaderboard entries with alternating row backgrounds
     textAlign(LEFT);
     for (let i = startIndex; i < endIndex; i++) {
       const entry = leaderboardData[i];
-      const y = 140 + (i - startIndex) * 30;
+      const y = 150 + (i - startIndex) * 30;
+      
+      // Alternating row backgrounds
+      if ((i - startIndex) % 2 === 0) {
+        fill(30, 30, 60, 100);
+      } else {
+        fill(40, 40, 80, 100);
+      }
+      rect(width * 0.05, y - 20, width * 0.9, 30, 5);
       
       // Highlight the current player's score if it matches
-      const isCurrentPlayer = entry.score === score && entry.created_at && 
-                             new Date(entry.created_at).getTime() > Date.now() - 60000; // Within the last minute
+      const isCurrentPlayer = entry.score === score && entry.level === level && entry.created_at && 
+                             new Date(entry.created_at).getTime() > Date.now() - 300000; // Within the last 5 minutes
       
       if (isCurrentPlayer) {
         fill(100, 255, 100, 50);
         rect(width * 0.05, y - 20, width * 0.9, 30, 5);
+        
+        // Add a "YOU" indicator
+        fill(100, 255, 100);
+        textAlign(RIGHT);
+        text('YOU', width * 0.04, y);
       }
       
-      // Draw rank
+      // Draw rank with medal for top 3
       fill(255);
-      text(`${i + 1}.`, width * 0.1, y);
+      textAlign(LEFT);
+      
+      if (i === 0) {
+        // Gold medal for 1st place
+        fill(255, 215, 0);
+        text('🥇 1', width * 0.1, y);
+      } else if (i === 1) {
+        // Silver medal for 2nd place
+        fill(192, 192, 192);
+        text('🥈 2', width * 0.1, y);
+      } else if (i === 2) {
+        // Bronze medal for 3rd place
+        fill(205, 127, 50);
+        text('🥉 3', width * 0.1, y);
+      } else {
+        // Regular rank
+        fill(255);
+        text(`${i + 1}.`, width * 0.1, y);
+      }
       
       // Draw email (masked for privacy)
       const email = entry.email || 'anonymous';
       const maskedEmail = maskEmail(email);
+      
+      // Highlight current player's email
+      if (isCurrentPlayer) {
+        fill(100, 255, 100);
+      } else {
+        fill(255);
+      }
       text(maskedEmail, width * 0.2, y);
       
       // Draw score
       textAlign(RIGHT);
-      text(entry.score.toLocaleString(), width * 0.8, y);
+      if (isCurrentPlayer) {
+        fill(100, 255, 100);
+      } else {
+        fill(255, 220, 100);
+      }
+      text(entry.score.toLocaleString(), width * 0.7, y);
+      
+      // Draw level
+      if (isCurrentPlayer) {
+        fill(100, 255, 100);
+      } else {
+        fill(100, 200, 255);
+      }
+      text(entry.level || '1', width * 0.85, y);
+      
       textAlign(LEFT);
     }
     
-    // Draw pagination controls
+    // Draw pagination controls with better styling
     if (totalPages > 1) {
+      // Pagination background
+      fill(30, 30, 60, 200);
+      rect(width * 0.2, height - 90, width * 0.6, 40, 10);
+      
       textAlign(CENTER);
       fill(255);
       textSize(16);
-      text(`Page ${leaderboardPage + 1} of ${totalPages}`, width / 2, height - 80);
+      text(`Page ${leaderboardPage + 1} of ${totalPages}`, width / 2, height - 65);
       
       // Previous page button
       if (leaderboardPage > 0) {
-        fill(150, 150, 255);
-        text('< Previous', width / 3, height - 50);
+        drawButton('< PREV', width / 3, height - 40, function() {
+          leaderboardPage--;
+        });
       }
       
       // Next page button
       if (leaderboardPage < totalPages - 1) {
-        fill(150, 150, 255);
-        text('Next >', width * 2 / 3, height - 50);
+        drawButton('NEXT >', width * 2 / 3, height - 40, function() {
+          leaderboardPage++;
+        });
       }
     }
     
     // Instructions to return
     fill(200);
     textSize(14);
-    text('Press ESC to return to game over screen', width / 2, height - 20);
+    text('Press ESC to return to game over screen', width / 2, height - 15);
+    
+    // Draw offline indicator if using mock data
+    if (leaderboardData[0] && leaderboardData[0].id === '1' && leaderboardData[0].email === 'player1@example.com') {
+      fill(255, 150, 50);
+      textSize(12);
+      text('OFFLINE MODE', width - 60, 20);
+    }
   } catch (error) {
     console.error('Error drawing leaderboard:', error);
     // Show error message
@@ -531,6 +974,12 @@ function drawLeaderboard() {
     textSize(18);
     textAlign(CENTER);
     text('Error displaying leaderboard', width / 2, height / 2);
+    text(error.message, width / 2, height / 2 + 30);
+    
+    // Instructions to return
+    fill(200);
+    textSize(14);
+    text('Press ESC to return to game over screen', width / 2, height - 20);
   }
 }
 
@@ -567,7 +1016,54 @@ function handleLeaderboardClicks() {
   // This function will be called from mousePressed in sketch.js
   if (gameState !== LEADERBOARD_VIEW) return false;
   
-  // The actual click handling is done in the drawButton function
+  // Check for pagination button clicks
+  const totalPages = Math.ceil(leaderboardData.length / leaderboardEntriesPerPage);
+  
+  // Previous page button
+  if (leaderboardPage > 0) {
+    let isHovering = mouseX > width / 3 - 50 && 
+                     mouseX < width / 3 + 50 && 
+                     mouseY > height - 50 && 
+                     mouseY < height - 30;
+    
+    if (isHovering) {
+      leaderboardPage--;
+      return true;
+    }
+  }
+  
+  // Next page button
+  if (leaderboardPage < totalPages - 1) {
+    let isHovering = mouseX > width * 2 / 3 - 50 && 
+                     mouseX < width * 2 / 3 + 50 && 
+                     mouseY > height - 50 && 
+                     mouseY < height - 30;
+    
+    if (isHovering) {
+      leaderboardPage++;
+      return true;
+    }
+  }
+  
+  // Check for ESC key equivalent (clicking outside the leaderboard area)
+  let leaderboardArea = {
+    x: width * 0.05,
+    y: 80,
+    width: width * 0.9,
+    height: height - 150
+  };
+  
+  let isOutsideLeaderboard = mouseX < leaderboardArea.x || 
+                             mouseX > leaderboardArea.x + leaderboardArea.width ||
+                             mouseY < leaderboardArea.y || 
+                             mouseY > leaderboardArea.y + leaderboardArea.height;
+  
+  if (isOutsideLeaderboard) {
+    // Return to game over screen
+    gameState = GAME_OVER;
+    return true;
+  }
+  
   return true;
 }
 
