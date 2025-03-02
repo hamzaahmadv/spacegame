@@ -6,9 +6,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Space Shooter Game</title>
+  
   <!-- Load p5.js with error handling -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js" 
           onerror="alert('Failed to load p5.js library. Please check your internet connection and refresh the page.')"></script>
+  
   <script>
     // Check if p5.js loaded correctly
     document.addEventListener('DOMContentLoaded', function() {
@@ -22,7 +24,9 @@
   </script>
   
   <!-- Add Supabase client library with proper module handling -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="handleSupabaseLoadError()"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js" 
+          onerror="handleSupabaseLoadError()"></script>
+  
   <script>
     // Handle Supabase load error
     function handleSupabaseLoadError() {
@@ -62,6 +66,7 @@
       }
     });
   </script>
+  
   <style>
     * {
       box-sizing: border-box;
@@ -96,6 +101,7 @@
     canvas {
       display: block !important;
       margin: 0 auto !important;
+      z-index: 1;
     }
     
     /* Styles for leaderboard input */
@@ -165,5 +171,23 @@
   <script src="achievements.js"></script>
   <script src="leaderboard.js"></script>
   <script src="sketch.js"></script>
+  
+  <script>
+    // Additional script to ensure canvas is visible
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if canvas exists after a short delay
+      setTimeout(function() {
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          console.log('Canvas found:', canvas);
+          // Ensure canvas is visible
+          canvas.style.display = 'block';
+          canvas.style.visibility = 'visible';
+        } else {
+          console.error('Canvas not found after game initialization');
+        }
+      }, 1000);
+    });
+  </script>
 </body>
 </html> 

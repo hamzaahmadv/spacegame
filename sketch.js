@@ -73,37 +73,55 @@ function preload() {
 function setup() {
   console.log("Setting up game...");
   
-  // Create canvas with a phone-like aspect ratio
-  setupPhoneLayout();
-  
-  console.log(`Canvas created with dimensions: ${gameWidth} x ${gameHeight}`);
-  
-  colorMode(RGB, 255);
-  textAlign(CENTER, CENTER);
-  resetGame();
-  
-  // Create stars for parallax background
-  for (let i = 0; i < 200; i++) {
-    stars.push(new Star());
-  }
-  
-  // Set initial background color
-  updateBackgroundColor(1);
-  
-  console.log("Game setup complete");
-  
-  // Debug info
-  if (DEBUG_MODE) {
-    console.log("DEBUG MODE ENABLED");
-    console.log("Window dimensions:", windowWidth, "x", windowHeight);
-    console.log("Game dimensions:", gameWidth, "x", gameHeight);
-    console.log("Canvas element:", document.querySelector('canvas'));
-    console.log("Game container:", document.getElementById('game-container'));
+  try {
+    // Create canvas with a phone-like aspect ratio
+    setupPhoneLayout();
+    
+    console.log(`Canvas created with dimensions: ${gameWidth} x ${gameHeight}`);
+    
+    colorMode(RGB, 255);
+    textAlign(CENTER, CENTER);
+    resetGame();
+    
+    // Create stars for parallax background
+    for (let i = 0; i < 200; i++) {
+      stars.push(new Star());
+    }
+    
+    // Set initial background color
+    updateBackgroundColor(1);
+    
+    console.log("Game setup complete");
+    
+    // Debug info
+    if (DEBUG_MODE) {
+      console.log("DEBUG MODE ENABLED");
+      console.log("Window dimensions:", windowWidth, "x", windowHeight);
+      console.log("Game dimensions:", gameWidth, "x", gameHeight);
+      console.log("Canvas element:", document.querySelector('canvas'));
+      console.log("Game container:", document.getElementById('game-container'));
+      console.log("Game state:", gameState);
+      console.log("Player object:", player);
+    }
+  } catch (error) {
+    console.error("Error during game setup:", error);
+    // Try to display error on screen
+    if (typeof createCanvas === 'function') {
+      createCanvas(400, 400);
+      background(0);
+      fill(255, 0, 0);
+      textSize(20);
+      textAlign(CENTER, CENTER);
+      text("Error setting up game:", width/2, height/2 - 20);
+      text(error.message, width/2, height/2 + 20);
+    }
   }
 }
 
 // Set up the phone-like layout
 function setupPhoneLayout() {
+  console.log("Setting up phone layout...");
+  
   // Calculate dimensions for a phone-like aspect ratio (9:16)
   if (windowWidth / windowHeight > 9/16) {
     // Window is wider than 9:16
@@ -114,6 +132,8 @@ function setupPhoneLayout() {
     gameWidth = windowWidth * 0.95; // Use 95% of window width
     gameHeight = gameWidth * 16/9;
   }
+  
+  console.log(`Calculated dimensions: ${gameWidth} x ${gameHeight}`);
   
   // Create canvas and place it in the game-container
   let canvas = createCanvas(gameWidth, gameHeight);
@@ -126,11 +146,15 @@ function setupPhoneLayout() {
     canvasElement.style.visibility = 'visible';
     canvasElement.style.margin = '0 auto';
     console.log('Canvas styling applied');
+  } else {
+    console.error('Canvas element not found after creation');
   }
   
   // Set UI dimensions
   uiHeight = gameHeight * 0.06; // Further reduced from 7% to 6% of height for UI
   touchZoneSize = gameWidth / 3; // Divide screen into thirds for touch controls
+  
+  console.log("Phone layout setup complete");
 }
 
 // Reset game to initial state

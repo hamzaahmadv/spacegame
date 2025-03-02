@@ -1,6 +1,6 @@
-# Space Shooter Game
+# Space Shooter Game with Leaderboard
 
-A polished p5.js space shooter game with custom-drawn sprites, vertical phone-like UI, and dynamic visual effects.
+A complete p5.js space shooter game with custom-drawn sprites, vertical phone-like UI, and a global leaderboard powered by Supabase.
 
 ## Features
 
@@ -19,6 +19,86 @@ A polished p5.js space shooter game with custom-drawn sprites, vertical phone-li
 - Performance optimization
 - Visual feedback like screen shake on impacts
 - Well-structured, thoroughly commented object-oriented code
+- Global leaderboard to track high scores
+
+## Setup Instructions
+
+### 1. Setting up Supabase for the Leaderboard
+
+1. **Create a Supabase Account**:
+   - Go to [Supabase](https://supabase.com/) and sign up for a free account
+   - Create a new project
+
+2. **Create the Leaderboard Table**:
+   - In your Supabase dashboard, go to the SQL Editor
+   - Run the following SQL to create the leaderboard table:
+
+   ```sql
+   CREATE TABLE leaderboard (
+     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+     email TEXT NOT NULL,
+     score INTEGER NOT NULL,
+     level INTEGER NOT NULL,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+   );
+
+   -- Create an index for faster sorting by score
+   CREATE INDEX idx_leaderboard_score ON leaderboard(score DESC);
+
+   -- Set up Row Level Security (RLS)
+   ALTER TABLE leaderboard ENABLE ROW LEVEL SECURITY;
+
+   -- Create a policy that allows anyone to read the leaderboard
+   CREATE POLICY "Anyone can read leaderboard" 
+     ON leaderboard FOR SELECT USING (true);
+
+   -- Create a policy that allows anyone to insert into the leaderboard
+   CREATE POLICY "Anyone can insert into leaderboard" 
+     ON leaderboard FOR INSERT WITH CHECK (true);
+   ```
+
+3. **Get Your API Keys**:
+   - In your Supabase dashboard, go to Project Settings > API
+   - Copy the "URL" and "anon/public" key
+   - Update the `SUPABASE_URL` and `SUPABASE_KEY` variables in the `leaderboard.js` file
+
+### 2. Running the Game
+
+1. **Local Development**:
+   - Clone this repository
+   - Open `index.html` in your browser to play the game
+   - For best results, use a modern browser like Chrome, Firefox, or Edge
+
+2. **Hosting the Game**:
+   - You can host this game on any static web hosting service like GitHub Pages, Netlify, or Vercel
+   - No server-side code is required as all backend functionality is handled by Supabase
+
+## Game Controls
+
+### Desktop:
+- **Arrow Keys** or **WASD**: Move the ship
+- **Space**: Shoot
+- **Enter**: Start game / Skip cutscenes
+
+### Mobile:
+- **Tap left side**: Move left
+- **Tap right side**: Move right
+- **Tap center**: Shoot
+
+## Troubleshooting
+
+If you encounter issues with the leaderboard functionality:
+
+1. **Check Browser Console**: Open your browser's developer tools (F12) and check for any errors in the console
+2. **Verify Supabase Connection**: Make sure your Supabase URL and API key are correct
+3. **Check Table Structure**: Ensure your leaderboard table has the correct structure as defined in the setup instructions
+4. **CORS Issues**: If you're hosting the game, make sure your Supabase project allows requests from your domain
+
+## Credits
+
+- Game developed using [p5.js](https://p5js.org/)
+- Backend powered by [Supabase](https://supabase.com/)
+- All game assets and artwork created programmatically within the game
 
 ## How to Play
 

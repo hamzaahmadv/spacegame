@@ -8,10 +8,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // Initialize Supabase client
 let supabase;
 
-// Leaderboard state constants
-const LEADERBOARD_SUBMIT = 4;
-const LEADERBOARD_VIEW = 5;
-
 // Leaderboard variables
 let leaderboardData = [];
 let leaderboardPage = 0;
