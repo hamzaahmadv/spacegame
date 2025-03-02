@@ -1,11 +1,16 @@
 // Space Shooter Game
 // A complete p5.js space shooter with custom-drawn sprites and vertical phone-like UI
 
+// Debug mode
+const DEBUG_MODE = true; // Set to true to enable debug information
+
 // Game state constants
 const GAME_START = 0;
 const GAME_PLAYING = 1;
 const GAME_OVER = 2;
 const GAME_BOSS_INTRO = 3; // New state for boss introduction
+const LEADERBOARD_SUBMIT = 4;
+const LEADERBOARD_VIEW = 5;
 
 // Game variables
 let gameState;
@@ -66,8 +71,12 @@ function preload() {
 
 // Setup function - called once at the beginning
 function setup() {
+  console.log("Setting up game...");
+  
   // Create canvas with a phone-like aspect ratio
   setupPhoneLayout();
+  
+  console.log(`Canvas created with dimensions: ${gameWidth} x ${gameHeight}`);
   
   colorMode(RGB, 255);
   textAlign(CENTER, CENTER);
@@ -80,6 +89,17 @@ function setup() {
   
   // Set initial background color
   updateBackgroundColor(1);
+  
+  console.log("Game setup complete");
+  
+  // Debug info
+  if (DEBUG_MODE) {
+    console.log("DEBUG MODE ENABLED");
+    console.log("Window dimensions:", windowWidth, "x", windowHeight);
+    console.log("Game dimensions:", gameWidth, "x", gameHeight);
+    console.log("Canvas element:", document.querySelector('canvas'));
+    console.log("Game container:", document.getElementById('game-container'));
+  }
 }
 
 // Set up the phone-like layout
@@ -87,16 +107,26 @@ function setupPhoneLayout() {
   // Calculate dimensions for a phone-like aspect ratio (9:16)
   if (windowWidth / windowHeight > 9/16) {
     // Window is wider than 9:16
-    gameHeight = windowHeight;
-    gameWidth = windowHeight * 9/16;
+    gameHeight = windowHeight * 0.95; // Use 95% of window height
+    gameWidth = gameHeight * 9/16;
   } else {
     // Window is narrower than 9:16
-    gameWidth = windowWidth;
-    gameHeight = windowWidth * 16/9;
+    gameWidth = windowWidth * 0.95; // Use 95% of window width
+    gameHeight = gameWidth * 16/9;
   }
   
-  // Create canvas
-  createCanvas(gameWidth, gameHeight);
+  // Create canvas and place it in the game-container
+  let canvas = createCanvas(gameWidth, gameHeight);
+  canvas.parent('game-container');
+  
+  // Ensure canvas is visible with proper styling
+  let canvasElement = document.querySelector('canvas');
+  if (canvasElement) {
+    canvasElement.style.display = 'block';
+    canvasElement.style.visibility = 'visible';
+    canvasElement.style.margin = '0 auto';
+    console.log('Canvas styling applied');
+  }
   
   // Set UI dimensions
   uiHeight = gameHeight * 0.06; // Further reduced from 7% to 6% of height for UI
@@ -174,6 +204,11 @@ function draw() {
   // Update and draw stars (always visible in all game states)
   updateStars();
   
+  // Draw debug info if enabled
+  if (DEBUG_MODE) {
+    drawDebugInfo();
+  }
+  
   // Handle different game states
   switch (gameState) {
     case GAME_START:
@@ -190,6 +225,14 @@ function draw() {
     case GAME_BOSS_INTRO:
       updateBossIntro();
       drawBossIntro();
+      break;
+    case LEADERBOARD_SUBMIT:
+      // The leaderboard input form is handled by HTML/CSS
+      // Just draw the game in the background
+      drawGame();
+      break;
+    case LEADERBOARD_VIEW:
+      drawLeaderboardScreen();
       break;
   }
   
@@ -214,6 +257,16 @@ function updateGameOver() {
   // Fade in effect for game over screen
   if (gameOverTimer < 60) {
     gameOverAlpha = min(255, gameOverAlpha + 5);
+  }
+  
+  // Show leaderboard input after a delay
+  if (gameOverTimer === 120) {
+    // Check if the showLeaderboardInput function exists
+    if (typeof showLeaderboardInput === 'function') {
+      showLeaderboardInput();
+    } else {
+      console.warn('Leaderboard functionality not available');
+    }
   }
   
   // Continue updating stars with reduced speed for background effect
@@ -706,6 +759,13 @@ function drawStartScreen() {
     fill(255, 255, 100);
     text(`High Score: ${highScore}`, width/2, height * 3/4);
   }
+  
+  // View leaderboard button - only if the function exists
+  if (typeof showLeaderboard === 'function') {
+    drawButton("VIEW LEADERBOARD", width/2, height * 5/6, () => {
+      showLeaderboard();
+    });
+  }
 }
 
 // Draw the game over screen
@@ -749,6 +809,14 @@ function drawGameOverScreen() {
     } else {
       text("Press ENTER to play again", width/2, height * 2/3 + 30);
     }
+    
+    // View leaderboard button (only show after the input form has been shown and dismissed)
+    if (gameOverTimer > 150 && typeof showLeaderboard === 'function') {
+      // Draw a button to view the leaderboard
+      drawButton("VIEW LEADERBOARD", width/2, height * 2/3 + 90, () => {
+        showLeaderboard();
+      });
+    }
   }
 }
 
@@ -791,11 +859,21 @@ function keyPressed() {
       // Skip boss intro
       gameState = GAME_PLAYING;
       spawnBoss();
+    } else if (gameState === LEADERBOARD_VIEW) {
+      // Return to game over screen
+      gameState = GAME_OVER;
+    }
+  }
+  
+  // Escape key to go back from leaderboard
+  if (keyCode === 27) { // ESC key
+    if (gameState === LEADERBOARD_VIEW) {
+      gameState = GAME_OVER;
     }
   }
   
   // Prevent default behavior for game keys
-  if ([32, 37, 38, 39, 40, 65, 68, 83, 87].includes(keyCode)) {
+  if ([27, 32, 37, 38, 39, 40, 65, 68, 83, 87].includes(keyCode)) {
     return false;
   }
 }
@@ -813,6 +891,12 @@ function touchStarted() {
   if (gameState === GAME_BOSS_INTRO) {
     gameState = GAME_PLAYING;
     spawnBoss();
+    return false;
+  }
+  
+  // Handle leaderboard clicks
+  if (gameState === LEADERBOARD_VIEW) {
+    handleLeaderboardClicks();
     return false;
   }
   
@@ -855,6 +939,7 @@ function isMobileDevice() {
 
 // Handle window resizing
 function windowResized() {
+  // Recalculate game dimensions and resize canvas
   setupPhoneLayout();
   
   // Adjust player position if needed
@@ -1222,5 +1307,55 @@ function createExplosion(x, y, size, color) {
     };
     
     visualEffects.push(particle);
+  }
+}
+
+// Handle mouse clicks
+function mousePressed() {
+  // Handle clicks on the start screen
+  if (gameState === GAME_START) {
+    // Check if the leaderboard button was clicked
+    // The actual click handling is done in the drawButton function
+    return false;
+  }
+  
+  // Handle clicks on the game over screen
+  if (gameState === GAME_OVER && gameOverTimer > 150) {
+    // Check if the leaderboard button was clicked
+    // The actual click handling is done in the drawButton function
+    return false;
+  }
+  
+  // Handle clicks on the leaderboard screen
+  if (gameState === LEADERBOARD_VIEW) {
+    // The actual click handling is done in the drawButton function
+    return false;
+  }
+  
+  return true;
+}
+
+// Draw debug information
+function drawDebugInfo() {
+  push();
+  fill(255, 255, 0);
+  textAlign(LEFT, TOP);
+  textSize(12);
+  text(`FPS: ${Math.round(frameRate())}`, 10, 10);
+  text(`Canvas: ${width} x ${height}`, 10, 25);
+  text(`Game State: ${gameState}`, 10, 40);
+  text(`Player: ${player ? 'Active' : 'Not created'}`, 10, 55);
+  pop();
+}
+
+// Draw the leaderboard screen
+function drawLeaderboardScreen() {
+  // Draw the leaderboard screen if the function exists
+  if (typeof drawLeaderboard === 'function') {
+    drawLeaderboard();
+  } else {
+    // Fallback to game over screen if leaderboard functionality is not available
+    gameState = GAME_OVER;
+    drawGameOverScreen();
   }
 } 

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P5.js Standalone Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <script>
+    // Simple p5.js sketch
+    let stars = [];
+    
+    function setup() {
+      console.log("Setting up standalone test");
+      
+      // Create canvas with a phone-like aspect ratio
+      let gameWidth, gameHeight;
+      
+      // Calculate dimensions for a phone-like aspect ratio (9:16)
+      if (windowWidth / windowHeight > 9/16) {
+        // Window is wider than 9:16
+        gameHeight = windowHeight * 0.95; // Use 95% of window height
+        gameWidth = gameHeight * 9/16;
+      } else {
+        // Window is narrower than 9:16
+        gameWidth = windowWidth * 0.95; // Use 95% of window width
+        gameHeight = gameWidth * 16/9;
+      }
+      
+      // Create canvas and place it in the game-container
+      let canvas = createCanvas(gameWidth, gameHeight);
+      canvas.parent('game-container');
+      
+      console.log(`Canvas created with dimensions: ${gameWidth} x ${gameHeight}`);
+      
+      // Create stars for background
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: random(width),
+          y: random(height),
+          size: random(1, 3),
+          speed: random(0.5, 2)
+        });
+      }
+    }
+    
+    function draw() {
+      background(10, 10, 30);
+      
+      // Draw stars
+      fill(255);
+      noStroke();
+      for (let star of stars) {
+        ellipse(star.x, star.y, star.size, star.size);
+        
+        // Move stars
+        star.y += star.speed;
+        
+        // Wrap stars around screen
+        if (star.y > height) {
+          star.y = 0;
+          star.x = random(width);
+        }
+      }
+      
+      // Draw a simple spaceship
+      fill(0, 200, 255);
+      stroke(0, 100, 200);
+      strokeWeight(2);
+      triangle(width/2, height - 100, width/2 - 20, height - 60, width/2 + 20, height - 60);
+      
+      // Draw UI
+      fill(255);
+      textSize(20);
+      textAlign(CENTER, CENTER);
+      text("P5.js is working!", width/2, 50);
+      text("FPS: " + Math.round(frameRate()), width/2, 80);
+    }
+    
+    function windowResized() {
+      // Recalculate dimensions and resize canvas
+      let gameWidth, gameHeight;
+      
+      // Calculate dimensions for a phone-like aspect ratio (9:16)
+      if (windowWidth / windowHeight > 9/16) {
+        gameHeight = windowHeight * 0.95;
+        gameWidth = gameHeight * 9/16;
+      } else {
+        gameWidth = windowWidth * 0.95;
+        gameHeight = gameWidth * 16/9;
+      }
+      
+      resizeCanvas(gameWidth, gameHeight);
+    }
+  </script>
+</body>
+</html> 

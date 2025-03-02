@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Shooter Game - Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- Load game classes in dependency order -->
+  <script src="star.js"></script>
+  <script src="bullet.js"></script>
+  <script src="player.js"></script>
+  <script src="ships.js"></script>
+  <script src="enemy.js"></script>
+  <script src="smartenemy.js"></script>
+  <script src="boss.js"></script>
+  <script src="powerup.js"></script>
+  <script src="achievements.js"></script>
+  <script>
+    // Create a dummy leaderboard object to prevent errors
+    const leaderboard = {
+      init: function() { console.log("Dummy leaderboard initialized"); },
+      submitScore: function() { console.log("Dummy score submission"); },
+      getLeaderboard: function() { return []; },
+      showLeaderboard: function() { console.log("Dummy leaderboard display"); }
+    };
+  </script>
+  <script src="sketch.js"></script>
+</body>
+</html> 

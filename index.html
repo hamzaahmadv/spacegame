@@ -6,28 +6,153 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Space Shooter Game</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <!-- Load p5.js with error handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js" 
+          onerror="alert('Failed to load p5.js library. Please check your internet connection and refresh the page.')"></script>
+  <script>
+    // Check if p5.js loaded correctly
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof p5 === 'undefined') {
+        console.error('p5.js is not loaded correctly');
+        alert('Failed to load p5.js library. Please check your internet connection and refresh the page.');
+      } else {
+        console.log('p5.js loaded successfully');
+      }
+    });
+  </script>
+  
+  <!-- Add Supabase client library with proper module handling -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="handleSupabaseLoadError()"></script>
+  <script>
+    // Handle Supabase load error
+    function handleSupabaseLoadError() {
+      console.error('Failed to load Supabase library. Leaderboard functionality will be disabled.');
+      // Create a dummy supabase object to prevent errors
+      window.supabaseClient = {
+        createClient: function() {
+          console.warn('Using dummy Supabase client');
+          return {
+            from: function() {
+              return {
+                select: function() { return this; },
+                insert: function() { return this; },
+                order: function() { return this; },
+                limit: function() { 
+                  return { 
+                    data: [], 
+                    error: { message: 'Supabase not available' } 
+                  }; 
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+    
+    // Make sure Supabase is available globally
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if Supabase is loaded
+      if (typeof supabase !== 'undefined') {
+        window.supabaseClient = supabase;
+        console.log('Supabase assigned to window object');
+      } else {
+        console.error('Supabase library not loaded correctly');
+        handleSupabaseLoadError();
+      }
+    });
+  </script>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       background-color: #000;
-      touch-action: none; /* Prevent default touch actions */
-      position: fixed; /* Prevent bounce on mobile */
       width: 100%;
       height: 100%;
     }
+    
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
     canvas {
-      display: block;
+      display: block !important;
+      margin: 0 auto !important;
+    }
+    
+    /* Styles for leaderboard input */
+    #leaderboardInput {
+      display: none;
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 30, 0.8);
+      border: 2px solid #4080ff;
+      border-radius: 10px;
+      padding: 20px;
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      z-index: 100;
+      width: 80%;
+      max-width: 300px;
+    }
+    #leaderboardInput input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #4080ff;
+      background-color: rgba(0, 0, 50, 0.5);
+      color: white;
+    }
+    #leaderboardInput button {
+      background-color: #4080ff;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #leaderboardInput button:hover {
+      background-color: #5090ff;
     }
   </style>
 </head>
 <body>
+  <div id="game-container">
+    <!-- Leaderboard input form -->
+    <div id="leaderboardInput">
+      <h2>Submit Your Score</h2>
+      <p id="finalScoreDisplay"></p>
+      <input type="email" id="playerEmail" placeholder="Enter your email" required>
+      <div>
+        <button id="submitScore">Submit</button>
+        <button id="skipSubmission">Skip</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Load game classes in dependency order -->
   <script src="star.js"></script>
   <script src="bullet.js"></script>
@@ -38,6 +163,7 @@
   <script src="boss.js"></script>
   <script src="powerup.js"></script>
   <script src="achievements.js"></script>
+  <script src="leaderboard.js"></script>
   <script src="sketch.js"></script>
 </body>
 </html> 

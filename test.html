@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P5.js Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    #test-container {
+      border: 2px solid #333;
+      background-color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-container"></div>
+  
+  <script>
+    function setup() {
+      console.log("Setting up test sketch");
+      let canvas = createCanvas(400, 400);
+      canvas.parent('test-container');
+      background(220);
+      console.log("Canvas created with dimensions: 400 x 400");
+    }
+    
+    function draw() {
+      background(220);
+      fill(255, 0, 0);
+      ellipse(width/2, height/2, 100, 100);
+      fill(0);
+      textSize(20);
+      textAlign(CENTER, CENTER);
+      text("P5.js is working!", width/2, height/2);
+    }
+  </script>
+</body>
+</html> 
