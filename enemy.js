@@ -10,7 +10,7 @@ class Enemy {
     this.size = 30;
     this.health = 1;
     this.points = 100;
-    this.color = color(255, 0, 0);
+    this.color = color(255, 50, 50); // Brighter red
     this.animationOffset = random(TWO_PI);
   }
   
@@ -64,7 +64,7 @@ class BasicEnemy extends Enemy {
     this.vel = createVector(0, random(1.5, 3) * (width / 400)); // Scale speed based on screen width
     this.wobbleAmount = random(0.5, 1.5) * (width / 400);
     this.wobbleSpeed = random(0.05, 0.1);
-    this.color = color(255, 100, 100);
+    this.color = color(255, 60, 60); // Brighter red
     this.points = 100;
     // Scale size based on screen width
     this.size = PLAYER_SIZE * 0.9 * (width / 400);
@@ -96,13 +96,18 @@ class BasicEnemy extends Enemy {
     
     // Engine glow
     noStroke();
-    fill(255, 150, 0, 150);
+    fill(255, 100, 0, 150);
     ellipse(-this.size / 4, this.size / 3, this.size / 3, this.size / 5);
     ellipse(this.size / 4, this.size / 3, this.size / 3, this.size / 5);
     
-    // Cockpit
-    fill(200, 0, 0, 200);
+    // Cockpit - make it more menacing with red glow
+    fill(255, 0, 0, 200);
     ellipse(0, 0, this.size / 2, this.size / 2);
+    
+    // Add danger markings
+    stroke(255, 255, 0);
+    strokeWeight(1);
+    line(-this.size / 4, -this.size / 6, this.size / 4, -this.size / 6);
     
     pop();
   }
@@ -117,7 +122,7 @@ class ZigzagEnemy extends Enemy {
     this.zigzagTimer = 0;
     this.zigzagPeriod = random(30, 60);
     this.zigzagDirection = random() > 0.5 ? 1 : -1;
-    this.color = color(255, 200, 0);
+    this.color = color(255, 120, 0); // Orange color
     // Scale size based on screen width
     this.size = PLAYER_SIZE * 0.8 * (width / 400);
     this.points = 150;
@@ -172,15 +177,20 @@ class ZigzagEnemy extends Enemy {
     line(this.size / 2, 0, this.size / 3, -this.size / 3);
     line(this.size / 2, 0, this.size / 3, this.size / 3);
     
-    // Cockpit
+    // Cockpit - make it more menacing with orange/red glow
     noStroke();
-    fill(255, 150, 0, 200);
+    fill(255, 80, 0, 200);
     ellipse(0, 0, this.size / 2, this.size / 2);
     
     // Engine glow
-    fill(255, 200, 0, 100 + sin(frameCount * 0.2) * 50);
+    fill(255, 150, 0, 100 + sin(frameCount * 0.2) * 50);
     ellipse(-this.size / 3, 0, this.size / 4, this.size / 4);
     ellipse(this.size / 3, 0, this.size / 4, this.size / 4);
+    
+    // Add danger markings
+    stroke(255, 255, 0);
+    strokeWeight(1);
+    line(-this.size / 4, 0, this.size / 4, 0);
     
     pop();
   }
@@ -193,7 +203,7 @@ class HunterEnemy extends Enemy {
     // Adjust speed for vertical phone layout
     this.maxSpeed = random(1.5, 2.5) * (width / 400);
     this.acceleration = 0.1 * (width / 400);
-    this.color = color(150, 0, 255);
+    this.color = color(200, 0, 0); // Deep red color
     // Scale size based on screen width
     this.size = PLAYER_SIZE * 1.1 * (width / 400);
     this.rotationAngle = 0;
@@ -247,24 +257,26 @@ class HunterEnemy extends Enemy {
     }
     endShape(CLOSE);
     
-    // Center core
+    // Add danger markings - warning stripes
+    stroke(255, 255, 0);
+    strokeWeight(1);
+    for (let i = -1; i <= 1; i += 2) {
+      line(i * pulseSize / 4, -pulseSize / 4, i * pulseSize / 4, pulseSize / 4);
+    }
+    
+    // Center core - make it more menacing with red glow
     noStroke();
-    fill(200, 100, 255);
+    fill(255, 0, 0, 150 + sin(this.pulseTimer * 2) * 50);
     ellipse(0, 0, pulseSize / 2, pulseSize / 2);
     
-    // Glowing orbs at vertices
-    fill(255, 150, 255, 150 + sin(frameCount * 0.1) * 50);
-    for (let i = 0; i < 4; i++) {
-      let angle = i * TWO_PI / 4;
-      let x = cos(angle) * pulseSize / 2;
-      let y = sin(angle) * pulseSize / 2;
-      ellipse(x, y, pulseSize / 6, pulseSize / 6);
-    }
+    // Add pulsing red glow
+    fill(255, 0, 0, 50 + sin(this.pulseTimer * 3) * 30);
+    ellipse(0, 0, pulseSize * 0.8, pulseSize * 0.8);
     
     pop();
   }
   
   getCollisionRadius() {
-    return this.size / 2 * (1 + sin(this.pulseTimer) * 0.1);
+    return this.size * 0.4; // Slightly smaller collision radius than visual size
   }
 } 

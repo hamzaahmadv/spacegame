@@ -233,24 +233,24 @@ function resetGame() {
 
 // Update background color based on level
 function updateBackgroundColor(level) {
-  // Different background colors for each level theme
+  // Different shades of blue/black for each level
   let theme = (level - 1) % 5;
   
   switch(theme) {
     case 0: // Level 1: Deep blue
       bgColor = color(10, 10, 30);
       break;
-    case 1: // Level 2: Purple nebula
-      bgColor = color(20, 5, 35);
+    case 1: // Level 2: Darker blue
+      bgColor = color(5, 8, 25);
       break;
-    case 2: // Level 3: Green nebula
-      bgColor = color(5, 25, 20);
+    case 2: // Level 3: Navy blue
+      bgColor = color(5, 15, 35);
       break;
-    case 3: // Level 4: Red nebula
-      bgColor = color(30, 5, 15);
+    case 3: // Level 4: Deep space blue
+      bgColor = color(2, 5, 20);
       break;
-    case 4: // Level 5+: Cosmic
-      bgColor = color(15, 15, 25);
+    case 4: // Level 5+: Cosmic black with blue tint
+      bgColor = color(0, 5, 15);
       break;
   }
 }
